@@ -1064,15 +1064,26 @@ function updateAlertCard(count) {
   const badge = $("ptBellBadge");
 
   if (count > 0) {
+    const label = `${count} alarma${count > 1 ? "s" : ""} activa${count > 1 ? "s" : ""}`;
     card?.classList.add("pt-has-alert");
-    if (msg) msg.textContent = `${count} alarma${count > 1 ? "s" : ""} activa${count > 1 ? "s" : ""}`;
-    if (cnt) cnt.textContent = `${count} alarma${count > 1 ? "s" : ""}`;
-    badge?.classList.add("pt-badge-visible");
+    if (msg) msg.textContent = label;
+    if (cnt) cnt.textContent = label;
+    if (badge) {
+      badge.textContent = String(count);
+      badge.setAttribute("aria-label", label);
+      badge.removeAttribute("aria-hidden");
+      badge.classList.add("pt-badge-visible");
+    }
   } else {
     card?.classList.remove("pt-has-alert");
     if (msg) msg.textContent = "Sin alarmas activas";
     if (cnt) cnt.textContent = "";
-    badge?.classList.remove("pt-badge-visible");
+    if (badge) {
+      badge.textContent = "";
+      badge.setAttribute("aria-label", "");
+      badge.setAttribute("aria-hidden", "true");
+      badge.classList.remove("pt-badge-visible");
+    }
   }
 }
 
@@ -1090,7 +1101,14 @@ function labelGenero(value) {
 
 function setProgress(id, pct) {
   const el = $(id);
-  if (el) el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  if (!el) return;
+  const clamped = Math.max(0, Math.min(100, pct));
+  el.style.width = `${clamped}%`;
+  // Actualizar aria-valuenow en el contenedor progressbar padre
+  const bar = el.closest("[role='progressbar']") || el.parentElement;
+  if (bar?.getAttribute("role") === "progressbar") {
+    bar.setAttribute("aria-valuenow", String(Math.round(clamped)));
+  }
 }
 
 function setDonut(id, pct) {

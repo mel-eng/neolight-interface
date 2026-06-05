@@ -1356,3 +1356,100 @@
   justify-content: center;
   align-items: center;
 }
+
+
+/* =========================================================
+   14. ACCESIBILIDAD — ARIA y contraste
+   ========================================================= */
+
+/* ── Visually hidden: accesible para lectores, invisible ── */
+#view-dashboard-patient .pt-visually-hidden,
+#pt-alarm-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  /* No usar display:none ni visibility:hidden — ocultaría del AT */
+}
+
+/* ── ESP status colores via clases (no style.color inline) ─ */
+#view-dashboard-patient #espStatus.pt-esp--ok   { color: var(--pt-state-ok-text);     }
+#view-dashboard-patient #espStatus.pt-esp--warn  { color: var(--pt-state-warn-text);   }
+#view-dashboard-patient #espStatus.pt-esp--err   { color: var(--pt-state-danger-text); }
+
+/* Garantizar contraste suficiente: WCAG AA 4.5:1 mínimo    */
+/* Los valores han sido verificados (ver audit en el commit) */
+
+/* ── Alert card en estado activo — contraste explícito ──── */
+/* pt-alert-card base: texto sobre fondo blanco → OK        */
+/* pt-alert-card.pt-has-alert: reforzar para que el texto   */
+/* sea legible sin depender solo del color                   */
+#view-dashboard-patient .pt-alert-card.pt-has-alert .pt-ac-title {
+  color: var(--pt-state-danger-text);       /* #c62828 — ratio 5.6:1 sobre blanco */
+}
+#view-dashboard-patient .pt-alert-card.pt-has-alert .pt-ac-msg {
+  color: var(--pt-state-danger-text);
+  font-weight: var(--pt-weight-semibold);   /* refuerzo no-solo-color */
+}
+
+/* ── Badge de alarmas: contraste sobre fondo oscuro ─────── */
+/* El badge tiene fondo danger (oscuro) → texto blanco       */
+#view-dashboard-patient .pt-bell-badge.pt-badge-visible {
+  /* Asegurar texto blanco sobre fondo de alarma */
+  color: var(--pt-white, #fff);
+  /* Borde que ayuda a distinguirlo en fondos claros (non-color cue) */
+  outline: 2px solid rgba(255,255,255,.6);
+  outline-offset: 1px;
+}
+
+/* ── Sensor bars: indicador no-solo-color ───────────────── */
+/* La barra usa color para el nivel; añadir patrón de        */
+/* acceso alternativo con la etiqueta de valor en el em      */
+#view-dashboard-patient .patient-sensor-bar[role="progressbar"] {
+  /* Mantener borde visible para usuarios con baja visión de color */
+  border: 1px solid var(--pt-color-border);
+}
+
+/* ── Focus visible mejorado para teclado ────────────────── */
+/* El foco por defecto del browser a veces es invisible      */
+#view-dashboard-patient :focus-visible {
+  outline: 3px solid var(--pt-color-primary);
+  outline-offset: 3px;
+  border-radius: var(--pt-radius-xs);
+}
+
+/* Botones de modo en sección de solicitudes */
+#view-dashboard-patient .btn:focus-visible,
+#view-dashboard-patient .pt-export-btn:focus-visible,
+#view-dashboard-patient .pt-cam-btn:focus-visible,
+#view-dashboard-patient .pt-bell-btn:focus-visible {
+  outline: 3px solid var(--pt-color-primary);
+  outline-offset: 3px;
+}
+
+/* ── Reduced motion: desactivar animaciones de alarma ───── */
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard-patient .pt-alert-card.pt-alert-pulse,
+  #view-dashboard-patient .pt-bell-btn.ringing {
+    animation: none;
+  }
+}
+
+/* ── High contrast mode: reforzar bordes ────────────────── */
+@media (forced-colors: active) {
+  #view-dashboard-patient .pt-metric-widget,
+  #view-dashboard-patient .pt-alert-card,
+  #view-dashboard-patient .pt-timer-card {
+    border: 2px solid ButtonText;
+  }
+  #view-dashboard-patient .pt-bell-badge.pt-badge-visible {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

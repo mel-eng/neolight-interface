@@ -65,16 +65,35 @@ function animatePatientAlarmUI(payload = {}) {
   bell?.classList.add("ringing", "pt-has-alert");
   card?.classList.add("pt-alert-pulse", "pt-has-alert");
 
+  const alarmName = payload?.tipo || payload?.type || "alarma";
+  const isCritical = String(payload?.severidad || "").toLowerCase() === "critical";
+
   if (badge) {
     const current = Number(badge.textContent || "0") || 0;
     const next = payload?.active_count != null ? Number(payload.active_count) : current + 1;
-    badge.textContent = String(Math.max(1, next));
+    const count = Math.max(1, next);
+    badge.textContent = String(count);
+    // Actualizar aria-label para que el lector anuncie el conteo
+    badge.setAttribute("aria-label", `${count} alarma${count > 1 ? "s" : ""} activa${count > 1 ? "s" : ""}`);
+    badge.removeAttribute("aria-hidden");
     badge.classList.add("pt-badge-visible");
   }
 
-  const alarmName = payload?.tipo || payload?.type || "alarma";
   if (msg) msg.textContent = `Alerta: ${alarmName}`;
   if (cnt) cnt.textContent = badge?.textContent || "1";
+
+  // Anunciar en la live region assertive para que el lector
+  // de pantalla interrumpa el flujo actual en alarmas críticas
+  const announceEl = document.getElementById("pt-alarm-announce");
+  if (announceEl) {
+    // Vaciar primero para forzar re-anuncio si el texto es igual
+    announceEl.textContent = "";
+    requestAnimationFrame(() => {
+      announceEl.textContent = isCritical
+        ? `Alarma crítica: ${alarmName}. Atención requerida de inmediato.`
+        : `Nueva alerta: ${alarmName}.`;
+    });
+  }
 
   playPediatricAlarmSound();
 }
@@ -86,9 +105,11 @@ function animatePatientAlarmUI(payload = {}) {
 export function setESPStatus(text, kind) {
   const tag = $("espStatus"); if (!tag) return;
   tag.textContent = text;
-  tag.style.color =
-    kind === "ok"   ? "#4a7c3f" :
-    kind === "warn" ? "#b87a2a" : "#c4462a";
+  // Usar clases de token en lugar de style.color hardcodeado
+  tag.classList.remove("pt-esp--ok", "pt-esp--warn", "pt-esp--err");
+  if (kind === "ok")   tag.classList.add("pt-esp--ok");
+  if (kind === "warn") tag.classList.add("pt-esp--warn");
+  if (kind === "err")  tag.classList.add("pt-esp--err");
 }
 
 export function updateHUD(data) {

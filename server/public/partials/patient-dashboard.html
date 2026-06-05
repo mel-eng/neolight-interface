@@ -12,7 +12,8 @@
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
-            <span class="pt-bell-badge" id="ptBellBadge"></span>
+            <span class="pt-bell-badge" id="ptBellBadge"
+              aria-label="" aria-hidden="true"></span>
           </button>
         </div>
 
@@ -94,9 +95,13 @@
               </div>
               <!-- Métricas HUD: visibles cuando hay telemetría activa -->
               <div class="patient-hero-center-metrics" aria-label="Métricas en tiempo real">
-                <div class="pt-hcm-row"><span class="pt-hcm-lbl">DIST</span><b class="pt-hcm-val" id="hudDist">— cm</b></div>
+                <div class="pt-hcm-row"><span class="pt-hcm-lbl">DIST</span><b class="pt-hcm-val" id="hudDist"
+                  aria-live="polite" aria-atomic="true"
+                  aria-label="Distancia lámpara">— cm</b></div>
                 <div class="pt-hcm-divider"></div>
-                <div class="pt-hcm-row"><span class="pt-hcm-lbl">PWM</span><b class="pt-hcm-val" id="hudLux">— %</b></div>
+                <div class="pt-hcm-row"><span class="pt-hcm-lbl">PWM</span><b class="pt-hcm-val" id="hudLux"
+                  aria-live="polite" aria-atomic="true"
+                  aria-label="Intensidad PWM">— %</b></div>
               </div>
               <div class="pt-hero-overlay">
                 <span class="pt-kicker">Seguimiento terapéutico · NEOLIGHT</span>
@@ -121,62 +126,84 @@
             <div class="patient-side-cards">
 
               <!-- Alerts card -->
-              <div class="pt-alert-card" id="ptAlertCard">
+              <div class="pt-alert-card" id="ptAlertCard"
+                   role="status" aria-live="polite" aria-atomic="false"
+                   aria-label="Estado de alertas clínicas">
                 <div class="pt-ac-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 </div>
                 <div class="pt-ac-body">
                   <div class="pt-ac-title">Alertas activas</div>
-                  <div class="pt-ac-msg" id="ptAlertMsg">Sin alarmas activas</div>
-                  <span class="pt-ac-count" id="ptAlertCount"></span>
+                  <div class="pt-ac-msg" id="ptAlertMsg"
+                       aria-live="polite" aria-atomic="true">Sin alarmas activas</div>
+                  <span class="pt-ac-count" id="ptAlertCount" aria-hidden="true"></span>
                 </div>
               </div>
 
+              <!-- Región de anuncio para alarmas críticas (assertive) -->
+              <div id="pt-alarm-announce" role="alert" aria-live="assertive"
+                   aria-atomic="true" class="pt-visually-hidden"></div>
+
               <!-- 4 métricas en grid 2×2 -->
               <div class="pt-side-metric-grid">
-                <div class="pt-metric-widget">
-                  <div class="neo-widget-icon"><img src="./img/foco.png" alt="Intensidad" /></div>
+                <div class="pt-metric-widget" role="group" aria-label="Intensidad LED">
+                  <div class="neo-widget-icon" aria-hidden="true"><img src="./img/foco.png" alt="Intensidad" /></div>
                   <div class="pt-mw-body">
                     <div class="pt-wlbl">Intensidad LED</div>
-                    <div class="pt-wval" id="patientLightLevel">—</div>
-                    <div class="patient-sensor-bar"><i id="patientLightBar"></i></div>
-                    <em id="patientLightStatus">Esperando LDR</em>
+                    <div class="pt-wval" id="patientLightLevel"
+                    aria-live="polite" aria-atomic="true"
+                    aria-label="Intensidad LED">—</div>
+                    <div class="patient-sensor-bar" role="progressbar"
+                    aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                    aria-label="Intensidad LED — nivel"><i id="patientLightBar" aria-hidden="true"></i></div>
+                    <em id="patientLightStatus" aria-live="polite" aria-atomic="true">Esperando LDR</em>
                   </div>
                 </div>
-                <div class="pt-metric-widget">
-                  <div class="neo-widget-icon"><img src="./img/distancia.png" alt="Distancia" /></div>
+                <div class="pt-metric-widget" role="group" aria-label="Distancia lámpara">
+                  <div class="neo-widget-icon" aria-hidden="true"><img src="./img/distancia.png" alt="Distancia" /></div>
                   <div class="pt-mw-body">
                     <div class="pt-wlbl">Distancia lámpara</div>
-                    <div class="pt-wval" id="patientDistance">—</div>
-                    <div class="patient-sensor-bar"><i id="patientDistanceBar"></i></div>
-                    <em id="patientDistanceStatus">Esperando HC-SR04</em>
+                    <div class="pt-wval" id="patientDistance"
+                    aria-live="polite" aria-atomic="true"
+                    aria-label="Distancia lámpara">—</div>
+                    <div class="patient-sensor-bar" role="progressbar"
+                    aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                    aria-label="Distancia lámpara — nivel"><i id="patientDistanceBar" aria-hidden="true"></i></div>
+                    <em id="patientDistanceStatus" aria-live="polite" aria-atomic="true">Esperando HC-SR04</em>
                   </div>
                 </div>
-                <div class="pt-metric-widget">
-                  <div class="neo-widget-icon"><img src="./img/temp_body.png" alt="Temp bebé" /></div>
+                <div class="pt-metric-widget" role="group" aria-label="Temperatura bebé">
+                  <div class="neo-widget-icon" aria-hidden="true"><img src="./img/temp_body.png" alt="Temp bebé" /></div>
                   <div class="pt-mw-body">
                     <div class="pt-wlbl">Temperatura bebé</div>
-                    <div class="pt-wval" id="patientBabyTemp">—</div>
-                    <em id="patientBabyTempStatus">Sin lectura</em>
+                    <div class="pt-wval" id="patientBabyTemp"
+                    aria-live="polite" aria-atomic="true"
+                    aria-label="Temperatura bebé">—</div>
+                    <em id="patientBabyTempStatus" aria-live="polite" aria-atomic="true">Sin lectura</em>
                   </div>
                 </div>
-                <div class="pt-metric-widget">
-                  <div class="neo-widget-icon"><img src="./img/temp_amb.png" alt="Ambiente" /></div>
+                <div class="pt-metric-widget" role="group" aria-label="Temperatura ambiente">
+                  <div class="neo-widget-icon" aria-hidden="true"><img src="./img/temp_amb.png" alt="Ambiente" /></div>
                   <div class="pt-mw-body">
                     <div class="pt-wlbl">Temperatura ambiente</div>
-                    <div class="pt-wval" id="patientAmbientTemp">—</div>
-                    <em id="patientAmbientTempStatus">Sin lectura</em>
+                    <div class="pt-wval" id="patientAmbientTemp"
+                    aria-live="polite" aria-atomic="true"
+                    aria-label="Temperatura ambiente">—</div>
+                    <em id="patientAmbientTempStatus" aria-live="polite" aria-atomic="true">Sin lectura</em>
                   </div>
                 </div>
               </div>
 
               <!-- Timer card -->
-              <div class="pt-timer-card" id="timerCard">
+              <div class="pt-timer-card" id="timerCard"
+                   role="timer" aria-label="Timer de sesión de terapia"
+                   aria-live="off">
                 <div class="pt-tc-head">
                   <div class="neo-widget-icon"><img src="./img/reloj.png" alt="Tiempo" /></div>
                   <div class="pt-tc-info">
                     <div class="pt-stat-lbl">Tiempo en terapia</div>
-                    <div class="pt-tc-val" id="tiempoTerapia">00:00:00</div>
+                    <div class="pt-tc-val" id="tiempoTerapia"
+                       aria-label="Tiempo de terapia transcurrido">00:00:00</div>
                     <small>Toca para pausar</small>
                   </div>
                 </div>
@@ -342,11 +369,11 @@
         </div>
 
         <!-- Conexión -->
-        <div class="patient-connection-card">
+        <div class="patient-connection-card" role="region" aria-label="Estado de conexión del sistema">
           <h3>Conexión</h3>
-          <span><b>ESP32 maestro</b><em id="patientMasterStatus">Sin datos</em></span>
+          <span><b>ESP32 maestro</b><em id="patientMasterStatus" aria-live="polite" aria-atomic="true">Sin datos</em></span>
           <span><b>ESP32 esclavo</b><em id="patientSlaveStatus">Sin datos</em></span>
-          <span><b>Socket.IO</b><em id="patientSocketStatus">Conectando</em></span>
+          <span><b>Socket.IO</b><em id="patientSocketStatus" aria-live="polite" aria-atomic="true">Conectando</em></span>
         </div>
 
         <!-- (Rail IDs ahora viven en sus secciones correctas del aside) -->
