@@ -690,7 +690,9 @@ function bindSocketStatusUI() {
     if (payload?.estado) updateStatusCard(payload || {});
     setESP32State({ connected: true, portOpen: true, label: "ESP32 transmitiendo", kind: "ok" });
     setText("patientMasterStatus", "Online");
-    // Limpiar banners de ESP32/socket si llegan datos reales
+    // Revelar HUD de métricas al recibir la primera telemetría real
+    document.querySelector("#view-dashboard-patient .patient-shell")
+      ?.classList.add("pt-has-telemetry");
     notifyESP32Online();
   });
 
@@ -698,6 +700,8 @@ function bindSocketStatusUI() {
     updateTemps(payload || {});
     updatePatientSensorCards(payload || {});
     setESP32State({ connected: true, label: "ESP32 transmitiendo", kind: "ok" });
+    document.querySelector("#view-dashboard-patient .patient-shell")
+      ?.classList.add("pt-has-telemetry");
     notifyESP32Online();
   });
 
@@ -760,7 +764,7 @@ function renderESP32Status() {
 function setModoUI(modo) {
   setModeState(modo);
   setText("pacModoActual", modo.toUpperCase());
-  setText("patientRailMode", modo.toUpperCase());
+  // patientRailMode eliminado — el modo visible está en pacModoActual
 
   Object.entries(DOM.modeByButton).forEach(([mode, id]) => {
     const btn = $(id);
@@ -1018,8 +1022,6 @@ function renderHistoryRows(sessions = [], events = []) {
 
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="3">Sin datos</td></tr>`;
-    const railTbody = $("patientRailHistoryRows");
-    if (railTbody) railTbody.innerHTML = `<tr><td colspan="3">Sin datos</td></tr>`;
     return;
   }
 
@@ -1029,19 +1031,14 @@ function renderHistoryRows(sessions = [], events = []) {
       <td>${escapeText(r.type)}</td>
       <td>${escapeText(r.detail)}</td>
     </tr>`).join("");
-
-  const railTbody = $("patientRailHistoryRows");
-  if (railTbody) railTbody.innerHTML = tbody.innerHTML;
 }
 
 function renderPatientAlarms(alarms = []) {
   const box = $("patientAlarmsList");
-  const railBox = $("patientRailAlarmsList");
   const emptyHtml = `<div class="item"><div class="left"><div class="t">Sin alarmas</div><div class="s">No hay registros recientes.</div></div><span class="badge ok">OK</span></div>`;
 
   if (!alarms.length) {
     if (box) box.innerHTML = emptyHtml;
-    if (railBox) railBox.innerHTML = emptyHtml;
     updateAlertCard(0);
     return;
   }
@@ -1055,7 +1052,6 @@ function renderPatientAlarms(alarms = []) {
   }).join("");
 
   if (box) box.innerHTML = html;
-  if (railBox) railBox.innerHTML = html;
 
   const active = alarms.filter(a => !a.silenciada).length;
   updateAlertCard(active);

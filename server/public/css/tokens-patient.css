@@ -1256,3 +1256,103 @@
   .pt-banner--danger { background: rgba(198,40,40,.18);  border-color: rgba(198,40,40,.30); }
   .pt-banner--info   { background: rgba(61,110,154,.20); border-color: rgba(61,110,154,.30); }
 }
+
+
+/* =========================================================
+   13. ELEMENTOS VISUALMENTE OCULTOS — sin display:none
+   =========================================================
+   Reemplaza los bloques display:none que antes escondían
+   elementos requeridos por JS. Estos métodos son accesibles
+   para lectores de pantalla y no rompen el layout.
+   ========================================================= */
+
+/* Canvases de gráficos para PDF — fuera del viewport, no display:none */
+#view-dashboard-patient .pt-chart-offscreen {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 360px;
+  overflow: hidden;
+  pointer-events: none;
+  aria-hidden: true;
+}
+
+/* Datos clínicos para PDF — visually-hidden pero accesibles */
+#view-dashboard-patient .pt-pdf-data {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Estado clínico del ESP32 — ahora visible en la sección de solicitudes */
+#view-dashboard-patient .pt-clinical-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pt-gap-xs);
+  padding: var(--pt-pad-md) var(--pt-pad-lg);
+  background: var(--pt-color-surface-alt);
+  border: 1px solid var(--pt-color-border);
+  border-radius: var(--pt-radius-md);
+  margin-top: var(--pt-space-4);
+}
+
+#view-dashboard-patient .pt-cs-label {
+  font-size: var(--pt-text-base);
+  font-weight: var(--pt-weight-semibold);
+  color: var(--pt-color-text);
+}
+
+#view-dashboard-patient .pt-cs-detail {
+  font-size: var(--pt-text-sm);
+  color: var(--pt-color-text-muted);
+  line-height: var(--pt-leading-relaxed);
+}
+
+/* Estado clínico: variantes de color */
+#view-dashboard-patient .pt-clinical-status.state-ok {
+  background: var(--pt-state-ok-bg);
+  border-color: var(--pt-state-ok-border);
+}
+#view-dashboard-patient .pt-clinical-status.state-ok .pt-cs-label {
+  color: var(--pt-state-ok-text);
+}
+#view-dashboard-patient .pt-clinical-status.state-warn {
+  background: var(--pt-state-warn-bg);
+  border-color: var(--pt-state-warn-border);
+}
+#view-dashboard-patient .pt-clinical-status.state-warn .pt-cs-label {
+  color: var(--pt-state-warn-text);
+}
+#view-dashboard-patient .pt-clinical-status.state-danger {
+  background: var(--pt-state-danger-bg);
+  border-color: var(--pt-state-danger-border);
+}
+#view-dashboard-patient .pt-clinical-status.state-danger .pt-cs-label {
+  color: var(--pt-state-danger-text);
+}
+
+/* HUD métricas: oculto por defecto, visible cuando hay telemetría */
+#view-dashboard-patient .patient-hero-center-metrics {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--pt-duration-slow) var(--pt-ease-out);
+}
+
+/* Se muestra cuando el shell recibe la clase .pt-has-telemetry */
+#view-dashboard-patient .patient-shell.pt-has-telemetry .patient-hero-center-metrics {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Donut del timer: ahora visible con transición */
+#view-dashboard-patient .pt-donut-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

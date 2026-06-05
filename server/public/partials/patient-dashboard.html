@@ -92,8 +92,8 @@
                 </svg>
                 <span>Cámara no disponible</span>
               </div>
-              <!-- DIST/PWM ocultos, IDs requeridos por JS -->
-              <div class="patient-hero-center-metrics" style="display:none" aria-hidden="true">
+              <!-- Métricas HUD: visibles cuando hay telemetría activa -->
+              <div class="patient-hero-center-metrics" aria-label="Métricas en tiempo real">
                 <div class="pt-hcm-row"><span class="pt-hcm-lbl">DIST</span><b class="pt-hcm-val" id="hudDist">— cm</b></div>
                 <div class="pt-hcm-divider"></div>
                 <div class="pt-hcm-row"><span class="pt-hcm-lbl">PWM</span><b class="pt-hcm-val" id="hudLux">— %</b></div>
@@ -185,7 +185,7 @@
                   <em id="patientTherapyGoal">Tiempo objetivo pendiente</em>
                   <span id="pacienteProgreso">—</span>
                 </div>
-                <div style="display:none">
+                <div class="pt-donut-wrap">
                   <div class="patient-donut" id="patientTherapyDonut"><span id="patientTherapyPct">0%</span></div>
                 </div>
               </div>
@@ -205,20 +205,24 @@
             </div>
           </div>
 
-          <!-- IDs ocultos requeridos por JS/PDF -->
-          <div aria-hidden="true" style="display:none">
+          <!-- Canvases para gráficos (visualmente ocultos, necesarios para PDF) -->
+          <!-- Se posicionan fuera de la vista con CSS, no con display:none -->
+          <div class="pt-chart-offscreen" aria-hidden="true">
             <canvas id="patientLedChart" width="360" height="120"></canvas>
             <canvas id="patientTempChart" width="360" height="120"></canvas>
             <canvas id="patientDistanceChart" width="360" height="120"></canvas>
             <div class="patient-donut large" id="patientProgressChart"><span id="patientProgressChartText">0%</span></div>
-            <span id="pacienteNombre">—</span>
-            <span id="pacienteEdad">—</span>
-            <span id="pacienteDoctor">—</span>
-            <span id="patientHeroTime">00:00:00</span>
-            <span id="tempBebe">—</span>
-            <span id="tempAmbiente">—</span>
-            <div id="cardAltura"><span id="pacAlturaActual">—</span></div>
           </div>
+          <!-- Datos clínicos para PDF: visually-hidden, legibles por lectores de pantalla -->
+          <dl class="pt-pdf-data" aria-label="Datos clínicos del paciente">
+            <dt>Nombre</dt><dd id="pacienteNombre">—</dd>
+            <dt>Edad</dt><dd id="pacienteEdad">—</dd>
+            <dt>Doctor</dt><dd id="pacienteDoctor">—</dd>
+            <dt>Tiempo acumulado</dt><dd id="patientHeroTime">00:00:00</dd>
+            <dt>Temperatura bebé</dt><dd id="tempBebe">—</dd>
+            <dt>Temperatura ambiente</dt><dd id="tempAmbiente">—</dd>
+            <dt>Altura actual</dt><dd id="cardAltura"><span id="pacAlturaActual">—</span></dd>
+          </dl>
         </section>
 
         <!-- ── SOLICITUDES ──────────────────────────────────────── -->
@@ -269,10 +273,10 @@
             </div>
           </div>
 
-          <div class="patient-two-col">
-            <!-- sceneBox y statusCard: ocultos visualmente, requeridos por JS -->
-            <div style="display:none" id="sceneBox"><div class="scene-container small"><div class="scene-media"><img src="./img/neo.png" class="lamp-img neo-lamp-img" alt="Sistema NEOLIGHT" /></div></div></div>
-            <div style="display:none" class="status-card" id="statusCard"><div class="status-label" id="statusLabel">Sin datos</div><div class="status-detail" id="statusDetail">Esperando lecturas del sistema…</div></div>
+          <!-- Estado clínico integrado en la sección de solicitudes -->
+          <div class="pt-clinical-status" id="statusCard" role="status" aria-live="polite">
+            <span class="pt-cs-label" id="statusLabel">Sin datos</span>
+            <span class="pt-cs-detail" id="statusDetail">Esperando lecturas del sistema…</span>
           </div>
         </section>
 
@@ -345,13 +349,7 @@
           <span><b>Socket.IO</b><em id="patientSocketStatus">Conectando</em></span>
         </div>
 
-        <!-- IDs ocultos requeridos por JS -->
-        <div style="display:none">
-          <span id="patientRailMode">REPOSO</span>
-          <span id="patientTherapyAccumulated2">00:00:00</span>
-          <tbody id="patientRailHistoryRows"></tbody>
-          <div id="patientRailAlarmsList"></div>
-        </div>
+        <!-- (Rail IDs ahora viven en sus secciones correctas del aside) -->
 
       </aside>
     </section>
