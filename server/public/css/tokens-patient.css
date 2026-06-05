@@ -1033,3 +1033,226 @@
 #view-dashboard-patient .patient-shell.pt-loading .pt-export-row {
   opacity: 0; pointer-events: none;
 }
+
+
+/* =========================================================
+   12. TOASTS Y BANNERS — sistema de notificaciones de error
+   ========================================================= */
+
+/* ── Toast container ─────────────────────────────────────── */
+#pt-toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: .55rem;
+  width: min(360px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+/* ── Toast individual ────────────────────────────────────── */
+.pt-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .75rem 1rem;
+  border-radius: var(--pt-radius-lg);
+  border: 1px solid transparent;
+  background: var(--pt-white, #fff);
+  box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.07);
+  pointer-events: all;
+  font-size: var(--pt-text-sm, .72rem);
+  line-height: var(--pt-leading-normal, 1.5);
+  color: var(--pt-color-text, #2d2a45);
+
+  /* Estado inicial: invisible y desplazado */
+  opacity: 0;
+  transform: translateY(12px) scale(.97);
+  transition:
+    opacity  220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pt-toast--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.pt-toast--exit {
+  opacity: 0;
+  transform: translateY(8px) scale(.96);
+  transition:
+    opacity  180ms ease-in,
+    transform 180ms ease-in;
+}
+
+/* Variantes por severidad */
+.pt-toast--ok {
+  border-color: var(--pt-state-ok-border, #c8edd6);
+  background: var(--pt-state-ok-bg, #edf7f1);
+  color: var(--pt-state-ok-text, #2e6644);
+}
+.pt-toast--warn {
+  border-color: var(--pt-state-warn-border, #f8e6a8);
+  background: var(--pt-state-warn-bg, #fff7dc);
+  color: var(--pt-state-warn-text, #7a5a10);
+}
+.pt-toast--danger {
+  border-color: var(--pt-state-danger-border, #f7c7da);
+  background: var(--pt-state-danger-bg, #fff0f5);
+  color: var(--pt-state-danger-text, #c62828);
+}
+.pt-toast--info {
+  border-color: var(--pt-state-info-border, #c3e4f5);
+  background: var(--pt-state-info-bg, #dff3ff);
+  color: var(--pt-state-info-text, #3d6e9a);
+}
+
+.pt-toast__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+}
+
+.pt-toast__msg {
+  flex: 1;
+  font-weight: 500;
+}
+
+.pt-toast__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: .55;
+  padding: 2px;
+  margin-top: 1px;
+  border-radius: var(--pt-radius-xs, 6px);
+  color: inherit;
+  transition: opacity 150ms;
+}
+.pt-toast__close:hover { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-toast { transition: none; }
+}
+
+/* ── Banner container ────────────────────────────────────── */
+.pt-banner-container {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  /* Ocupa el ancho del shell, encima de la primera fila */
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: .35rem 0 0;
+}
+
+/* ── Banner individual ───────────────────────────────────── */
+.pt-banner {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .6rem 1rem;
+  border-radius: var(--pt-radius-lg, 20px);
+  border: 1px solid transparent;
+  font-size: var(--pt-text-sm, .72rem);
+  font-weight: 500;
+  line-height: 1.4;
+
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity  250ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pt-banner--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.pt-banner--exit {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 180ms ease-in, transform 180ms ease-in;
+}
+
+.pt-banner--warn {
+  border-color: var(--pt-state-warn-border, #f8e6a8);
+  background: var(--pt-state-warn-bg, #fff7dc);
+  color: var(--pt-state-warn-text, #7a5a10);
+}
+.pt-banner--danger {
+  border-color: var(--pt-state-danger-border, #f7c7da);
+  background: var(--pt-state-danger-bg, #fff0f5);
+  color: var(--pt-state-danger-text, #c62828);
+}
+.pt-banner--info {
+  border-color: var(--pt-state-info-border, #c3e4f5);
+  background: var(--pt-state-info-bg, #dff3ff);
+  color: var(--pt-state-info-text, #3d6e9a);
+}
+
+.pt-banner__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.pt-banner__msg {
+  flex: 1;
+}
+
+.pt-banner__action {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--pt-radius-xs, 6px);
+  padding: .2rem .6rem;
+  font-size: var(--pt-text-xs, .65rem);
+  font-weight: 700;
+  cursor: pointer;
+  color: inherit;
+  opacity: .85;
+  transition: opacity 150ms;
+  white-space: nowrap;
+}
+.pt-banner__action:hover { opacity: 1; }
+
+.pt-banner__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: .5;
+  padding: 2px;
+  border-radius: var(--pt-radius-xs, 6px);
+  color: inherit;
+  transition: opacity 150ms;
+}
+.pt-banner__close:hover { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-banner { transition: none; }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .pt-toast {
+    background: var(--pt-color-surface, #1e1a38);
+    box-shadow: 0 8px 32px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
+  }
+  .pt-toast--ok     { background: rgba(46,102,68,.22);   border-color: rgba(46,102,68,.35); }
+  .pt-toast--warn   { background: rgba(122,90,16,.22);   border-color: rgba(122,90,16,.35); }
+  .pt-toast--danger { background: rgba(198,40,40,.20);   border-color: rgba(198,40,40,.35); }
+  .pt-toast--info   { background: rgba(61,110,154,.22);  border-color: rgba(61,110,154,.35); }
+  .pt-banner--warn   { background: rgba(122,90,16,.20);  border-color: rgba(122,90,16,.30); }
+  .pt-banner--danger { background: rgba(198,40,40,.18);  border-color: rgba(198,40,40,.30); }
+  .pt-banner--info   { background: rgba(61,110,154,.20); border-color: rgba(61,110,154,.30); }
+}

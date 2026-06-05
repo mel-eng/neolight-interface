@@ -19,6 +19,18 @@ import {
 } from "./socket.js";
 import { saveSession, initTimer } from "./sessions.js";
 import { doLogout } from "./auth.js";
+import {
+  toast,
+  showBanner,
+  clearBanner,
+  notifyDataError,
+  notifySocketDisconnected,
+  notifySocketReconnected,
+  notifyESP32Offline,
+  notifyESP32Online,
+  notifyExportError,
+  notifyInitError,
+} from "./patient-errors.js";
 
 // =========================================================
 // ESTADO LOCAL DEL DASHBOARD
@@ -79,6 +91,10 @@ const MODE_ERROR_MESSAGES = {
 
 export async function initPatientDashboard(sessionSnapshot) {
   const { paciente, tutor, doctor, last_session, plan, session, control, dispositivo } = sessionSnapshot;
+
+  // Notificar si faltan datos críticos de sesión
+  if (!paciente) notifyInitError("datos del paciente");
+  else if (!tutor)   notifyInitError("datos del tutor");
 
   setDashboardState({ paciente, tutor, control });
   renderPatientHeader(paciente, doctor);
@@ -173,7 +189,13 @@ async function refreshTutorState(reason = "realtime") {
 
   try {
     const { ok, data } = await fetchCurrentTutorState(tutorId);
-    if (!ok) return;
+    if (!ok) {
+      // Solo mostrar toast en poll — no spammear en refresco por evento
+      if (reason === "poll") notifyDataError("estado clínico");
+      return;
+    }
+    // Si había un banner de error de datos, limpiarlo al recuperarse
+    clearBanner("api-data");
     setDashboardState({ paciente: data.paciente, tutor: data.tutor, control: data.control });
     renderPatientHeader(data.paciente, data.doctor);
     renderClinicalData(data.paciente, data.tutor, data.dispositivo, data.control);
@@ -184,7 +206,17 @@ async function refreshTutorState(reason = "realtime") {
       loadRecentAlarms(data.paciente.id);
       loadPatientHistory(data.paciente.id);
     }
-  } catch (_) {}
+  } catch (err) {
+    // Error de red (fetch falló completamente)
+    if (reason === "poll") {
+      showBanner(
+        "api-data",
+        "Sin conexión al servidor — los datos clínicos pueden estar desactualizados.",
+        "warn",
+        { action: "Reintentar", onAction: () => refreshTutorState("poll") }
+      );
+    }
+  }
 }
 
 function scheduleTutorPolling() {
@@ -620,12 +652,21 @@ function bindSocketStatusUI() {
     setESP32State({ connected: true, label: "ESP32 online", kind: "ok" });
     setText("patientSocketStatus", "Conectado");
     setText("patientMasterStatus", "Online");
+    notifySocketReconnected();
   });
 
   socket.on("disconnect", () => {
     setESP32State({ connected: false, portOpen: false, label: "ESP32 offline", kind: "err" });
     setText("patientSocketStatus", "Desconectado");
     setText("patientMasterStatus", "Offline");
+    notifySocketDisconnected();
+    notifyESP32Offline("offline");
+  });
+
+  socket.on("connect_error", () => {
+    setESP32State({ connected: false, portOpen: false, label: "Error de conexión", kind: "err" });
+    setText("patientSocketStatus", "Error");
+    notifySocketDisconnected();
   });
 
   socket.on("lamp:port", st => {
@@ -635,6 +676,11 @@ function bindSocketStatusUI() {
       kind: st?.open ? "ok" : "warn",
     });
     setText("patientMasterStatus", st?.open ? "Online" : "Offline");
+    if (st?.open) {
+      notifyESP32Online();
+    } else {
+      notifyESP32Offline("no-port");
+    }
   });
 
   socket.on("telemetry", payload => {
@@ -644,22 +690,31 @@ function bindSocketStatusUI() {
     if (payload?.estado) updateStatusCard(payload || {});
     setESP32State({ connected: true, portOpen: true, label: "ESP32 transmitiendo", kind: "ok" });
     setText("patientMasterStatus", "Online");
+    // Limpiar banners de ESP32/socket si llegan datos reales
+    notifyESP32Online();
   });
 
   socket.on("temps", payload => {
     updateTemps(payload || {});
     updatePatientSensorCards(payload || {});
     setESP32State({ connected: true, label: "ESP32 transmitiendo", kind: "ok" });
+    notifyESP32Online();
   });
 
   socket.on("status", payload => {
     updateStatusCard(payload);
     if (payload?.esp32_connected == null) return;
+    const online = !!payload.esp32_connected;
     setESP32State({
-      connected: !!payload.esp32_connected,
-      label: payload.esp32_connected ? "ESP32 online" : "ESP32 offline",
-      kind: payload.esp32_connected ? "ok" : "err",
+      connected: online,
+      label: online ? "ESP32 online" : "ESP32 offline",
+      kind: online ? "ok" : "err",
     });
+    if (online) {
+      notifyESP32Online();
+    } else {
+      notifyESP32Offline("offline");
+    }
   });
 }
 
@@ -864,11 +919,12 @@ function bindPatientEvents(pacienteId) {
 
   $("exportBtn")?.addEventListener("click", async () => {
     if (!dashboardState.pacienteId) return;
-
     try {
+      toast("Generando Excel…", "info", 2000);
       await exportExcel(dashboardState.pacienteId);
+      toast("Excel descargado correctamente.", "ok");
     } catch (_) {
-      alert("Error exportando datos. Intenta de nuevo.");
+      notifyExportError("excel");
     }
   });
 
@@ -877,9 +933,11 @@ function bindPatientEvents(pacienteId) {
   $("exportBtnTop")?.addEventListener("click", async () => {
     if (!dashboardState.pacienteId) return;
     try {
+      toast("Generando Excel…", "info", 2000);
       await exportExcel(dashboardState.pacienteId);
+      toast("Excel descargado correctamente.", "ok");
     } catch (_) {
-      alert("Error exportando datos. Intenta de nuevo.");
+      notifyExportError("excel");
     }
   });
   $("patientSidebarLogout")?.addEventListener("click", async () => {
@@ -906,15 +964,21 @@ function bindPatientSections() {
 async function loadRecentAlarms(pacienteId) {
   try {
     const { ok, data } = await fetchAlarms(pacienteId);
+    if (!ok) {
+      toast("No se pudieron cargar las alarmas.", "warn");
+      return;
+    }
     renderPatientAlarms(data.alarms || []);
-    if (!ok || !data.alarms?.length) return;
+    if (!data.alarms?.length) return;
 
     const criticals = data.alarms.filter(alarm => !alarm.silenciada && alarm.severidad === "critical");
     if (!criticals.length) return;
 
     const statusDet = $("statusDetail");
     if (statusDet) statusDet.textContent += ` - ${criticals.length} alarma(s) critica(s) activa(s).`;
-  } catch (_) {}
+  } catch (_) {
+    toast("Error al conectar con el servidor de alarmas.", "warn");
+  }
 }
 
 async function loadPatientHistory(pacienteId) {
@@ -924,10 +988,15 @@ async function loadPatientHistory(pacienteId) {
       fetchSessions(pacienteId),
       fetchEvents(pacienteId),
     ]);
+    if (!sessionsRes.ok && !eventsRes.ok) {
+      toast("No se pudo cargar el historial de sesiones.", "warn");
+    }
     const sessions = sessionsRes.data?.sessions || [];
     const events = eventsRes.data?.events || [];
     renderHistoryRows(sessions, events);
-  } catch (_) {}
+  } catch (_) {
+    toast("Error al cargar el historial clínico.", "warn");
+  }
 }
 
 function renderHistoryRows(sessions = [], events = []) {
@@ -1137,11 +1206,15 @@ function drawLineChart(id, seriesList, colors, minY, maxY) {
 }
 
 function downloadPatientPdfReport() {
-  renderPatientPdfReport();
-  const report = $("patientPdfReport");
-  if (report) report.setAttribute("aria-hidden", "false");
-  window.print();
-  window.setTimeout(() => report?.setAttribute("aria-hidden", "true"), 500);
+  try {
+    renderPatientPdfReport();
+    const report = $("patientPdfReport");
+    if (report) report.setAttribute("aria-hidden", "false");
+    window.print();
+    window.setTimeout(() => report?.setAttribute("aria-hidden", "true"), 500);
+  } catch (_) {
+    notifyExportError("pdf");
+  }
 }
 
 function renderPatientPdfReport() {
