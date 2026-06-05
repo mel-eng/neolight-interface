@@ -1453,3 +1453,349 @@
     color: HighlightText;
   }
 }
+
+
+/* =========================================================
+   15. RIGHT RAIL — REDISEÑO (referencia visual aprobada)
+   =========================================================
+   Scope: #view-dashboard-patient .patient-right-rail
+   Cubre: aside wrapper, tarjeta perfil, tarjeta conexión.
+   Todas las reglas anteriores de estos componentes quedan
+   sobrescritas por la cascada (este bloque va al final).
+   ========================================================= */
+
+/* ── 15.1 Aside wrapper ─────────────────────────────────── */
+#view-dashboard-patient .patient-right-rail {
+  width: var(--pt-rail-width, 306px);
+  min-width: 260px;
+  max-width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: transparent;
+  padding: 0 0 24px;
+  box-sizing: border-box;
+}
+
+/* ── 15.2 Rail header "PACIENTE" + divisor ──────────────── */
+#view-dashboard-patient .patient-right-rail .pt-rail-header {
+  padding: 0 2px 14px;
+  margin-bottom: 0;
+  border-bottom: 1.5px solid rgba(124, 107, 232, 0.13);
+}
+
+#view-dashboard-patient .patient-right-rail .pt-rail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: #a09bc0;
+}
+
+/* ── 15.3 Tarjeta base (perfil + conexión) ──────────────── */
+#view-dashboard-patient .patient-profile-card,
+#view-dashboard-patient .patient-connection-card {
+  background: #ffffff;
+  border: 1px solid rgba(124, 107, 232, 0.10);
+  border-radius: 22px;
+  box-shadow:
+    0 2px 12px rgba(124, 107, 232, 0.07),
+    0 1px 3px  rgba(0, 0, 0, 0.04);
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  /* reset conflicting rules from earlier blocks */
+  margin-bottom: 0;
+}
+
+/* ── 15.4 Avatar ────────────────────────────────────────── */
+#view-dashboard-patient .prc-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+#view-dashboard-patient .patient-profile-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #c5b4f5 0%, #a78bfa 55%, #9b8dea 100%) !important;
+  color: #ffffff !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(124, 107, 232, 0.25);
+  flex-shrink: 0;
+  margin-bottom: 0 !important;
+  /* undo grid/place-items from older rule */
+  place-items: unset;
+}
+
+/* ── 15.5 Nombre y código ───────────────────────────────── */
+#view-dashboard-patient .prc-name {
+  text-align: center;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: #1a1535 !important;
+  letter-spacing: -.01em;
+  line-height: 1.2;
+  margin: 0 0 5px !important;
+}
+
+#view-dashboard-patient .prc-code {
+  display: block;
+  text-align: center;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  color: #a09bc0 !important;
+  letter-spacing: .06em;
+  margin-bottom: 18px !important;
+}
+
+/* ── 15.6 Contenedor de filas ───────────────────────────── */
+#view-dashboard-patient .prc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+}
+
+/* ── 15.7 Fila individual (pill) ────────────────────────── */
+#view-dashboard-patient .prc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #f6f4ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 38px;
+  /* reset old border-bottom rule */
+  border-bottom: none !important;
+}
+
+/* ── 15.8 Label de fila (izquierda) ─────────────────────── */
+#view-dashboard-patient .prc-row-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #8e8aaa;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── 15.9 Ícono dentro del label ────────────────────────── */
+#view-dashboard-patient .prc-icon {
+  width: 14px;
+  height: 14px;
+  color: #b0abcc;
+  flex-shrink: 0;
+}
+
+/* ── 15.10 Valor de fila (derecha) ──────────────────────── */
+#view-dashboard-patient .prc-row-value {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  color: #1a1535 !important;
+  text-align: right !important;
+  line-height: 1.3;
+}
+
+/* Valor monoespaciado (timer) */
+#view-dashboard-patient .prc-row-value--mono {
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 12px !important;
+  letter-spacing: .03em;
+  color: #2d2a45 !important;
+}
+
+/* Valor de estado clínico — verde para "Estable" */
+#view-dashboard-patient .prc-row-value--status {
+  color: #2e8a5a !important;
+}
+
+/* ── 15.11 TARJETA CONEXIÓN ─────────────────────────────── */
+
+/* Título con ícono WiFi */
+#view-dashboard-patient .pcc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1535;
+  margin-bottom: 16px;
+}
+
+#view-dashboard-patient .pcc-wifi-icon {
+  width: 18px;
+  height: 18px;
+  color: #7c6be8;
+  flex-shrink: 0;
+}
+
+/* Contenedor de filas de conexión */
+#view-dashboard-patient .pcc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+}
+
+/* Fila de conexión (pill) */
+#view-dashboard-patient .pcc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #f6f4ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 38px;
+}
+
+/* Label izquierdo con ícono */
+#view-dashboard-patient .pcc-row-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #8e8aaa;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#view-dashboard-patient .pcc-row-label svg {
+  width: 14px;
+  height: 14px;
+  color: #b0abcc;
+  flex-shrink: 0;
+}
+
+/* Grupo status: dot + texto */
+#view-dashboard-patient .pcc-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Dot de estado */
+#view-dashboard-patient .pcc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c8d4d8;
+  flex-shrink: 0;
+  transition: background 300ms ease;
+}
+
+/* Texto de estado (em) */
+#view-dashboard-patient .pcc-status em {
+  font-style: normal !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: #8e8aaa;
+  transition: color 300ms ease;
+}
+
+/* ── 15.12 Estados de conexión ──────────────────────────── */
+
+/* "Conectado" / "Online" / "En línea" → verde */
+#view-dashboard-patient .pcc-status em[id="patientMasterStatus"]:not(:empty),
+#view-dashboard-patient .pcc-status em[id="patientSlaveStatus"]:not(:empty),
+#view-dashboard-patient .pcc-status em[id="patientSocketStatus"]:not(:empty) {
+  color: #2e8a5a;
+}
+
+/* Dot verde cuando el texto contiene "Conectado" / "Online" / "línea" */
+/* Manejado por JS via data-status en el contenedor pcc-row */
+#view-dashboard-patient .pcc-row[data-connected="true"] .pcc-dot {
+  background: #34c77b;
+  box-shadow: 0 0 0 2.5px rgba(52, 199, 123, 0.18);
+}
+
+#view-dashboard-patient .pcc-row[data-connected="true"] .pcc-status em {
+  color: #2e8a5a !important;
+}
+
+#view-dashboard-patient .pcc-row[data-connected="false"] .pcc-dot {
+  background: #c8d4d8;
+}
+
+#view-dashboard-patient .pcc-row[data-connected="false"] .pcc-status em {
+  color: #a09bc0 !important;
+}
+
+/* ── 15.13 Reset reglas antiguas que interfieren ────────── */
+
+/* Anular los h3 de la connection card antiguos */
+#view-dashboard-patient .patient-connection-card h3 {
+  display: none !important;
+}
+
+/* Anular reglas de > div y > span antiguas del profile card */
+#view-dashboard-patient .patient-profile-card > div:not(.prc-avatar-wrap):not(.prc-rows),
+#view-dashboard-patient .patient-profile-card > h3:not(.prc-name),
+#view-dashboard-patient .patient-profile-card > span:not(.prc-code),
+#view-dashboard-patient .patient-connection-card > span {
+  display: none !important;
+}
+
+/* Anular h3 del profile card antiguo */
+#view-dashboard-patient .patient-profile-card h3:not(.prc-name) {
+  display: none !important;
+}
+
+/* ── 15.14 Skeleton screens en el nuevo markup ──────────── */
+#view-dashboard-patient .patient-shell.pt-loading .prc-name,
+#view-dashboard-patient .patient-shell.pt-loading .prc-code {
+  background-image: linear-gradient(90deg, var(--pt-sk-base) 0%, var(--pt-sk-shine) 50%, var(--pt-sk-base) 100%);
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+  border-radius: 6px;
+}
+#view-dashboard-patient .patient-shell.pt-loading .prc-name  { width: 140px; height: 19px; display: block; margin: 0 auto 5px; }
+#view-dashboard-patient .patient-shell.pt-loading .prc-code  { width: 90px;  height: 13px; display: block; margin: 0 auto 18px; }
+#view-dashboard-patient .patient-shell.pt-loading .prc-row-value,
+#view-dashboard-patient .patient-shell.pt-loading .pcc-status em {
+  background-image: linear-gradient(90deg, var(--pt-sk-base) 0%, var(--pt-sk-shine) 50%, var(--pt-sk-base) 100%);
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+  border-radius: 4px;
+  width: 70px;
+  height: 12px;
+  display: inline-block;
+}
+
+/* ── 15.15 Responsive: rail en móvil ────────────────────── */
+@media (max-width: 900px) {
+  #view-dashboard-patient .patient-right-rail {
+    width: 100%;
+    max-width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  #view-dashboard-patient .patient-right-rail .pt-rail-header {
+    width: 100%;
+  }
+  #view-dashboard-patient .patient-profile-card,
+  #view-dashboard-patient .patient-connection-card {
+    flex: 1 1 260px;
+  }
+}

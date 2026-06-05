@@ -1382,5 +1382,15 @@ function escapeText(value) {
 
 function setText(id, value) {
   const el = $(id);
-  if (el) el.textContent = value;
+  if (!el) return;
+  el.textContent = value;
+  // Sync data-connected on the parent .pcc-row for CSS dot coloring
+  const CONNECTION_IDS = new Set(["patientMasterStatus", "patientSlaveStatus", "patientSocketStatus"]);
+  if (CONNECTION_IDS.has(id)) {
+    const row = el.closest(".pcc-row");
+    if (row) {
+      const connected = /conectad|online|en\s*línea/i.test(value);
+      row.dataset.connected = String(connected);
+    }
+  }
 }

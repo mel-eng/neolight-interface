@@ -351,32 +351,135 @@
       <!-- ═══ PANEL DERECHO — PACIENTE ════════════════════════════ -->
       <aside class="patient-right-rail pt-right-panel">
 
-        <!-- Encabezado del rail -->
+        <!-- Etiqueta de sección -->
         <div class="pt-rail-header">
-          <span class="pt-rail-label">Paciente</span>
+          <span class="pt-rail-label">PACIENTE</span>
         </div>
 
-        <!-- Perfil -->
+        <!-- Tarjeta de perfil -->
         <div class="patient-profile-card">
-          <div class="patient-profile-avatar" id="patientProfileAvatar">BB</div>
-          <h3 id="patientProfileName">—</h3>
-          <span id="patientProfileCode">Código —</span>
-          <div><b>Edad</b><em id="patientProfileAge">—</em></div>
-          <div><b>Tutor</b><em id="patientTutorName">—</em></div>
-          <div><b>Doctor</b><em id="patientDoctorName">—</em></div>
-          <div><b>Estado clínico</b><em id="patientClinicalState">—</em></div>
-          <div><b>Terapia acumulada</b><em id="patientTherapyAccumulated">00:00:00</em></div>
-        </div>
 
-        <!-- Conexión -->
+          <!-- Avatar circular -->
+          <div class="prc-avatar-wrap">
+            <div class="patient-profile-avatar" id="patientProfileAvatar">BB</div>
+          </div>
+
+          <!-- Nombre y código -->
+          <h3 class="prc-name" id="patientProfileName">—</h3>
+          <span class="prc-code" id="patientProfileCode">NEO-0000-0000</span>
+
+          <!-- Filas de datos tipo pill -->
+          <div class="prc-rows">
+
+            <div class="prc-row">
+              <span class="prc-row-label">Edad</span>
+              <em class="prc-row-value" id="patientProfileAge">—</em>
+            </div>
+
+            <div class="prc-row">
+              <span class="prc-row-label">Tutor</span>
+              <em class="prc-row-value" id="patientTutorName">—</em>
+            </div>
+
+            <div class="prc-row prc-row--icon">
+              <span class="prc-row-label">
+                <svg class="prc-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <circle cx="10" cy="7" r="3.5"/>
+                  <path d="M3 17c0-3.314 3.134-6 7-6s7 2.686 7 6"/>
+                </svg>
+                Doctor
+              </span>
+              <em class="prc-row-value" id="patientDoctorName">—</em>
+            </div>
+
+            <div class="prc-row prc-row--icon">
+              <span class="prc-row-label">
+                <svg class="prc-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <polyline points="2.5,11.5 7,7 11,11 17.5,4.5"/>
+                </svg>
+                Estado clínico
+              </span>
+              <em class="prc-row-value prc-row-value--status" id="patientClinicalState">—</em>
+            </div>
+
+            <div class="prc-row prc-row--icon">
+              <span class="prc-row-label">
+                <svg class="prc-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <circle cx="10" cy="10" r="7.5"/>
+                  <polyline points="10,5 10,10 13,13"/>
+                </svg>
+                Terapia acumulada
+              </span>
+              <em class="prc-row-value prc-row-value--mono" id="patientTherapyAccumulated">00:00:00</em>
+            </div>
+
+          </div><!-- /prc-rows -->
+        </div><!-- /patient-profile-card -->
+
+        <!-- Tarjeta de conexión -->
         <div class="patient-connection-card" role="region" aria-label="Estado de conexión del sistema">
-          <h3>Conexión</h3>
-          <span><b>ESP32 maestro</b><em id="patientMasterStatus" aria-live="polite" aria-atomic="true">Sin datos</em></span>
-          <span><b>ESP32 esclavo</b><em id="patientSlaveStatus">Sin datos</em></span>
-          <span><b>Socket.IO</b><em id="patientSocketStatus" aria-live="polite" aria-atomic="true">Conectando</em></span>
-        </div>
 
-        <!-- (Rail IDs ahora viven en sus secciones correctas del aside) -->
+          <div class="pcc-title">
+            <svg class="pcc-wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M1.5 8.5a15 15 0 0 1 21 0"/>
+              <path d="M5 12.5a10 10 0 0 1 14 0"/>
+              <path d="M8.5 16.5a5 5 0 0 1 7 0"/>
+              <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+            Conexión
+          </div>
+
+          <div class="pcc-rows">
+
+            <div class="pcc-row">
+              <span class="pcc-row-label">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                  <rect x="2" y="5" width="16" height="10" rx="2"/>
+                  <line x1="6" y1="9" x2="6" y2="11"/>
+                  <line x1="10" y1="8" x2="10" y2="12"/>
+                  <line x1="14" y1="9" x2="14" y2="11"/>
+                </svg>
+                ESP32 maestro
+              </span>
+              <span class="pcc-status">
+                <span class="pcc-dot" aria-hidden="true"></span>
+                <em id="patientMasterStatus" aria-live="polite" aria-atomic="true">Sin datos</em>
+              </span>
+            </div>
+
+            <div class="pcc-row">
+              <span class="pcc-row-label">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                  <circle cx="10" cy="10" r="7"/>
+                  <circle cx="10" cy="10" r="3"/>
+                  <line x1="10" y1="3" x2="10" y2="1.5"/>
+                  <line x1="10" y1="17" x2="10" y2="18.5"/>
+                </svg>
+                ESP32 esclavo
+              </span>
+              <span class="pcc-status">
+                <span class="pcc-dot" aria-hidden="true"></span>
+                <em id="patientSlaveStatus">Sin datos</em>
+              </span>
+            </div>
+
+            <div class="pcc-row">
+              <span class="pcc-row-label">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                  <path d="M3 7.5a9 9 0 0 1 14 0"/>
+                  <path d="M6 11a5 5 0 0 1 8 0"/>
+                  <circle cx="10" cy="14" r="1.2" fill="currentColor" stroke="none"/>
+                </svg>
+                Socket.IO
+              </span>
+              <span class="pcc-status">
+                <span class="pcc-dot" aria-hidden="true"></span>
+                <em id="patientSocketStatus" aria-live="polite" aria-atomic="true">Conectando</em>
+              </span>
+            </div>
+
+          </div><!-- /pcc-rows -->
+        </div><!-- /patient-connection-card -->
 
       </aside>
     </section>
