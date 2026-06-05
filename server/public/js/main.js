@@ -7,6 +7,7 @@
 import { $, state } from "./config.js";
 import { initAuth, openAuthModal, doLogout, bootstrapFromStorage } from "./auth.js";
 import { initSessions } from "./sessions.js";
+import { loadPartial, loadAllPartials } from "./partials.js";
 
 // =========================================================
 // NAVEGACIÓN
@@ -53,6 +54,8 @@ export async function enterFromSession(data) {
       doLogout(false);
       return;
     }
+    // Garantizar que el partial esté en el DOM antes de navegar
+    await loadPartial("doctor-dashboard.html");
     showDash("doctor");
     const { initSocket, socketIdentifyDoctor } = await import("./socket.js");
     initSocket();
@@ -66,9 +69,11 @@ export async function enterFromSession(data) {
     doLogout(false);
     return;
   }
+
+  // Garantizar que el partial esté en el DOM antes de navegar
+  await loadPartial("patient-dashboard.html");
   showDash("patient");
 
-  // Cargar e inicializar socket antes del dashboard
   const { initSocket, socketIdentifyTutor } = await import("./socket.js");
   initSocket();
   socketIdentifyTutor(data.tutor.id, data.paciente.id);
@@ -107,15 +112,22 @@ function bindNavButtons() {
 // =========================================================
 async function init() {
   bindNavButtons();
+
+  // Cargar auth modal primero — initAuth lo necesita en el DOM
+  await loadPartial("auth-modal.html");
   initAuth();
   initSessions();
 
-  // Inicializar calculadora de tasa por defecto
-  const planRate = $("planRate"), planIntensity = $("planIntensity");
-  if (planRate && planIntensity) planRate.value = "0.15";
-
   // Navegar a home
   navigate("home");
+
+  // Precargar dashboards en segundo plano mientras el usuario
+  // está en la landing, para que al hacer login estén listos
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(() => loadAllPartials());
+  } else {
+    setTimeout(() => loadAllPartials(), 1000);
+  }
 
   // Restaurar sesión desde localStorage
   await bootstrapFromStorage();
