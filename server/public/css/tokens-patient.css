@@ -503,3 +503,533 @@
 #view-dashboard-patient .pt-dot[data-status="danger"]  { background: var(--pt-state-danger-dot); }
 #view-dashboard-patient .pt-dot[data-status="info"]    { background: var(--pt-state-info-dot); }
 #view-dashboard-patient .pt-dot[data-status="neutral"] { background: var(--pt-state-neutral-dot); }
+
+
+/* =========================================================
+   11. SKELETON SCREENS — estados de carga del dashboard
+   =========================================================
+   Activación: añadir clase .pt-loading al .patient-shell
+   Desactivación: remover .pt-loading cuando los datos estén listos
+
+   Cada elemento real tiene su contraparte skeleton (.pt-sk-*)
+   que reemplaza visualmente el contenido mientras carga.
+
+   El shimmer usa un gradiente animado sobre la base skeleton.
+   Compatible con dark mode via las variables de tokens.
+   ========================================================= */
+
+/* ── Tokens de skeleton ─────────────────────────────────── */
+#view-dashboard-patient {
+  --pt-sk-base:    rgba(124, 107, 232, 0.08);
+  --pt-sk-shine:   rgba(255, 255, 255, 0.55);
+  --pt-sk-radius:  var(--pt-radius-xs);
+  --pt-sk-speed:   1.6s;
+}
+
+@media (prefers-color-scheme: dark) {
+  #view-dashboard-patient {
+    --pt-sk-base:  rgba(124, 107, 232, 0.16);
+    --pt-sk-shine: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ── Animación shimmer ──────────────────────────────────── */
+@keyframes pt-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+/* ── Clase base de skeleton ─────────────────────────────── */
+#view-dashboard-patient .pt-sk {
+  background: var(--pt-sk-base);
+  background-image: linear-gradient(
+    90deg,
+    var(--pt-sk-base)  0%,
+    var(--pt-sk-shine) 50%,
+    var(--pt-sk-base)  100%
+  );
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+  border-radius: var(--pt-sk-radius);
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Respect reduced motion ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard-patient .pt-sk {
+    animation: none;
+    background-image: none;
+  }
+}
+
+/* =========================================================
+   HERO CARD — overlay de skeleton sobre el video/cámara
+   ========================================================= */
+
+/* Cuando .pt-loading está activo, el overlay cubre el hero */
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-overlay {
+  background: var(--pt-color-surface-tinted);
+  border-radius: var(--pt-radius-xl);
+}
+
+/* Kicker: línea corta */
+#view-dashboard-patient .patient-shell.pt-loading .pt-kicker {
+  display: block;
+  width: 160px;
+  height: 12px;
+  margin-bottom: .6rem;
+}
+
+/* h1 saludo: línea ancha */
+#view-dashboard-patient .patient-shell.pt-loading #dashHelloPatient {
+  display: block;
+  width: 220px;
+  height: 32px;
+  margin-bottom: .75rem;
+  border-radius: var(--pt-radius-sm);
+}
+
+/* Tags hero: 3 pills */
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span {
+  display: inline-block;
+  width: 110px;
+  height: 26px;
+  border-radius: var(--pt-radius-full);
+  background: transparent;
+  border-color: transparent;
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span:nth-child(2) { width: 80px; }
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span:nth-child(3) { width: 140px; }
+
+/* Aplicar shimmer a los elementos del hero durante carga */
+#view-dashboard-patient .patient-shell.pt-loading .pt-kicker,
+#view-dashboard-patient .patient-shell.pt-loading #dashHelloPatient,
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span {
+  background: var(--pt-sk-base);
+  background-image: linear-gradient(
+    90deg,
+    var(--pt-sk-base)  0%,
+    var(--pt-sk-shine) 50%,
+    var(--pt-sk-base)  100%
+  );
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+  border-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard-patient .patient-shell.pt-loading .pt-kicker,
+  #view-dashboard-patient .patient-shell.pt-loading #dashHelloPatient,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span {
+    animation: none; background-image: none;
+  }
+}
+
+/* =========================================================
+   ALERT CARD — reemplazar mensaje por línea skeleton
+   ========================================================= */
+#view-dashboard-patient .patient-shell.pt-loading .pt-ac-msg {
+  width: 130px;
+  height: 14px;
+  display: block;
+  border-radius: var(--pt-sk-radius);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-ac-msg,
+#view-dashboard-patient .patient-shell.pt-loading .pt-ac-count {
+  background: var(--pt-sk-base);
+  background-image: linear-gradient(90deg, var(--pt-sk-base) 0%, var(--pt-sk-shine) 50%, var(--pt-sk-base) 100%);
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+  border-radius: var(--pt-sk-radius);
+}
+
+/* =========================================================
+   METRIC WIDGETS (4 tarjetas de sensores)
+   ========================================================= */
+
+/* Valor principal del widget */
+#view-dashboard-patient .patient-shell.pt-loading .pt-wval {
+  display: block;
+  width: 70px;
+  height: 22px;
+  margin-bottom: .3rem;
+  border-radius: var(--pt-sk-radius);
+}
+
+/* Status text bajo el valor */
+#view-dashboard-patient .patient-shell.pt-loading .pt-mw-body em {
+  display: block;
+  width: 100px;
+  height: 11px;
+  border-radius: var(--pt-sk-radius);
+}
+
+/* Barra de progreso de sensor */
+#view-dashboard-patient .patient-shell.pt-loading .patient-sensor-bar {
+  background: var(--pt-sk-base);
+  border-radius: var(--pt-sk-radius);
+}
+#view-dashboard-patient .patient-shell.pt-loading .patient-sensor-bar i {
+  display: none;
+}
+
+/* Ícono del widget: círculo skeleton */
+#view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--pt-radius-circle);
+  overflow: hidden;
+}
+#view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon img {
+  opacity: 0;
+}
+
+/* Aplicar shimmer a métricas */
+#view-dashboard-patient .patient-shell.pt-loading .pt-wval,
+#view-dashboard-patient .patient-shell.pt-loading .pt-mw-body em,
+#view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon {
+  background: var(--pt-sk-base);
+  background-image: linear-gradient(90deg, var(--pt-sk-base) 0%, var(--pt-sk-shine) 50%, var(--pt-sk-base) 100%);
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard-patient .patient-shell.pt-loading .pt-wval,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-mw-body em,
+  #view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon {
+    animation: none; background-image: none;
+  }
+}
+
+/* =========================================================
+   TIMER CARD
+   ========================================================= */
+
+/* Valor del timer */
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-val {
+  display: block;
+  width: 120px;
+  height: 28px;
+  border-radius: var(--pt-sk-radius);
+}
+
+/* Texto del pie del timer */
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot em,
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot span {
+  display: inline-block;
+  height: 13px;
+  border-radius: var(--pt-sk-radius);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot em   { width: 130px; }
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot span { width: 60px; }
+
+/* Barra de progreso de plan */
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-bar {
+  background: var(--pt-sk-base);
+  border-radius: var(--pt-sk-radius);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-bar span { display: none; }
+
+/* Shimmer en timer */
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-val,
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot em,
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot span {
+  background: var(--pt-sk-base);
+  background-image: linear-gradient(90deg, var(--pt-sk-base) 0%, var(--pt-sk-shine) 50%, var(--pt-sk-base) 100%);
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard-patient .patient-shell.pt-loading .pt-tc-val,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot em,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot span {
+    animation: none; background-image: none;
+  }
+}
+
+/* =========================================================
+   RIGHT RAIL — perfil del paciente
+   ========================================================= */
+
+/* Avatar: círculo */
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-avatar {
+  color: transparent;
+  background: var(--pt-sk-base);
+  background-image: linear-gradient(90deg, var(--pt-sk-base) 0%, var(--pt-sk-shine) 50%, var(--pt-sk-base) 100%);
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+}
+
+/* Nombre del paciente */
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileName {
+  width: 140px;
+  height: 20px;
+  display: block;
+  margin: .4rem auto;
+  border-radius: var(--pt-sk-radius);
+}
+
+/* Código */
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileCode {
+  display: block;
+  width: 80px;
+  height: 13px;
+  margin: 0 auto .6rem;
+  border-radius: var(--pt-sk-radius);
+}
+
+/* Filas de datos (edad, tutor, doctor, estado) */
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card em {
+  display: inline-block;
+  height: 13px;
+  border-radius: var(--pt-sk-radius);
+  vertical-align: middle;
+}
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(4)  em { width: 55px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(5)  em { width: 100px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(6)  em { width: 120px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(7)  em { width: 80px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(8)  em { width: 70px; }
+
+/* Estado de conexión */
+#view-dashboard-patient .patient-shell.pt-loading .patient-connection-card em {
+  display: inline-block;
+  width: 60px;
+  height: 13px;
+  border-radius: var(--pt-sk-radius);
+  vertical-align: middle;
+}
+
+/* Shimmer en rail */
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileName,
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileCode,
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card em,
+#view-dashboard-patient .patient-shell.pt-loading .patient-connection-card em {
+  background: var(--pt-sk-base);
+  background-image: linear-gradient(90deg, var(--pt-sk-base) 0%, var(--pt-sk-shine) 50%, var(--pt-sk-base) 100%);
+  background-size: 400px 100%;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard-patient .patient-shell.pt-loading #patientProfileName,
+  #view-dashboard-patient .patient-shell.pt-loading #patientProfileCode,
+  #view-dashboard-patient .patient-shell.pt-loading .patient-profile-card em,
+  #view-dashboard-patient .patient-shell.pt-loading .patient-connection-card em {
+    animation: none; background-image: none;
+  }
+}
+
+/* =========================================================
+   TRANSICIÓN DE SALIDA — reveal suave al recibir datos
+   ========================================================= */
+
+/* Los elementos que salen del estado skeleton hacen fade-in */
+#view-dashboard-patient .pt-hero-overlay,
+#view-dashboard-patient .pt-alert-card,
+#view-dashboard-patient .pt-metric-widget,
+#view-dashboard-patient .pt-timer-card,
+#view-dashboard-patient .patient-profile-card,
+#view-dashboard-patient .patient-connection-card {
+  transition: opacity var(--pt-duration-slow) var(--pt-ease-out);
+}
+
+/* Estado de carga: opacidad reducida en la card del timer y métricas */
+#view-dashboard-patient .patient-shell.pt-loading .pt-timer-card,
+#view-dashboard-patient .patient-shell.pt-loading .pt-metric-widget {
+  opacity: .85;
+}
+
+/* El export row se oculta durante la carga — no tiene sentido exportar sin datos */
+#view-dashboard-patient .patient-shell.pt-loading .pt-export-row {
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   11. SKELETON SCREENS — estados de carga del dashboard
+   =========================================================
+   Activación: añadir .pt-loading al .patient-shell
+   Desactivación: remover .pt-loading cuando datos listos
+   ========================================================= */
+
+#view-dashboard-patient {
+  --pt-sk-base:  rgba(124, 107, 232, 0.08);
+  --pt-sk-shine: rgba(255, 255, 255, 0.55);
+  --pt-sk-speed: 1.6s;
+}
+@media (prefers-color-scheme: dark) {
+  #view-dashboard-patient {
+    --pt-sk-base:  rgba(124, 107, 232, 0.16);
+    --pt-sk-shine: rgba(255, 255, 255, 0.08);
+  }
+}
+
+@keyframes pt-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+#view-dashboard-patient .pt-sk,
+#view-dashboard-patient .patient-shell.pt-loading .pt-kicker,
+#view-dashboard-patient .patient-shell.pt-loading #dashHelloPatient,
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span,
+#view-dashboard-patient .patient-shell.pt-loading .pt-ac-msg,
+#view-dashboard-patient .patient-shell.pt-loading .pt-ac-count,
+#view-dashboard-patient .patient-shell.pt-loading .pt-wval,
+#view-dashboard-patient .patient-shell.pt-loading .pt-mw-body em,
+#view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon,
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-val,
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot em,
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot span,
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-avatar,
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileName,
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileCode,
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card em,
+#view-dashboard-patient .patient-shell.pt-loading .patient-connection-card em {
+  background-color: var(--pt-sk-base);
+  background-image: linear-gradient(
+    90deg,
+    var(--pt-sk-base)  0%,
+    var(--pt-sk-shine) 50%,
+    var(--pt-sk-base)  100%
+  );
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+  animation: pt-shimmer var(--pt-sk-speed) ease-in-out infinite;
+  color: transparent !important;
+  border-color: transparent;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #view-dashboard-patient .pt-sk,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-kicker,
+  #view-dashboard-patient .patient-shell.pt-loading #dashHelloPatient,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-ac-msg,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-wval,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-mw-body em,
+  #view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-tc-val,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot em,
+  #view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot span,
+  #view-dashboard-patient .patient-shell.pt-loading .patient-profile-avatar,
+  #view-dashboard-patient .patient-shell.pt-loading #patientProfileName,
+  #view-dashboard-patient .patient-shell.pt-loading #patientProfileCode,
+  #view-dashboard-patient .patient-shell.pt-loading .patient-profile-card em,
+  #view-dashboard-patient .patient-shell.pt-loading .patient-connection-card em {
+    animation: none;
+    background-image: none;
+  }
+}
+
+/* ── Hero overlay ─────────────────────────────────────── */
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-overlay {
+  background: var(--pt-color-surface-tinted);
+  border-radius: var(--pt-radius-xl);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-kicker {
+  display: block; width: 160px; height: 12px;
+  margin-bottom: .6rem; border-radius: var(--pt-radius-xs);
+}
+#view-dashboard-patient .patient-shell.pt-loading #dashHelloPatient {
+  display: block; width: 220px; height: 32px;
+  margin-bottom: .75rem; border-radius: var(--pt-radius-sm);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span {
+  display: inline-block; height: 26px; border-radius: var(--pt-radius-full);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span:nth-child(1) { width: 110px; }
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span:nth-child(2) { width: 80px; }
+#view-dashboard-patient .patient-shell.pt-loading .pt-hero-tags span:nth-child(3) { width: 140px; }
+
+/* ── Alert card ───────────────────────────────────────── */
+#view-dashboard-patient .patient-shell.pt-loading .pt-ac-msg {
+  display: block; width: 130px; height: 14px;
+  border-radius: var(--pt-radius-xs);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-ac-count {
+  display: block; width: 60px; height: 11px;
+  border-radius: var(--pt-radius-xs);
+}
+
+/* ── Metric widgets ───────────────────────────────────── */
+#view-dashboard-patient .patient-shell.pt-loading .pt-wval {
+  display: block; width: 70px; height: 22px;
+  margin-bottom: .3rem; border-radius: var(--pt-radius-xs);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-mw-body em {
+  display: block; width: 100px; height: 11px;
+  border-radius: var(--pt-radius-xs);
+}
+#view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon {
+  width: 36px; height: 36px; border-radius: var(--pt-radius-circle);
+}
+#view-dashboard-patient .patient-shell.pt-loading .neo-widget-icon img { opacity: 0; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-sensor-bar { background: var(--pt-sk-base); }
+#view-dashboard-patient .patient-shell.pt-loading .patient-sensor-bar i { display: none; }
+
+/* ── Timer card ───────────────────────────────────────── */
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-val {
+  display: block; width: 120px; height: 28px;
+  border-radius: var(--pt-radius-xs);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot em {
+  display: inline-block; width: 130px; height: 13px;
+  border-radius: var(--pt-radius-xs); vertical-align: middle;
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-foot span {
+  display: inline-block; width: 60px; height: 13px;
+  border-radius: var(--pt-radius-xs); vertical-align: middle;
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-bar { background: var(--pt-sk-base); }
+#view-dashboard-patient .patient-shell.pt-loading .pt-tc-bar span { display: none; }
+
+/* ── Right rail — perfil ──────────────────────────────── */
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-avatar {
+  border-radius: var(--pt-radius-circle);
+}
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileName {
+  display: block; width: 140px; height: 20px;
+  margin: .4rem auto; border-radius: var(--pt-radius-xs);
+}
+#view-dashboard-patient .patient-shell.pt-loading #patientProfileCode {
+  display: block; width: 80px; height: 13px;
+  margin: 0 auto .6rem; border-radius: var(--pt-radius-xs);
+}
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card em {
+  display: inline-block; height: 13px;
+  border-radius: var(--pt-radius-xs); vertical-align: middle;
+}
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(4)  em { width: 55px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(5)  em { width: 100px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(6)  em { width: 120px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(7)  em { width: 80px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-profile-card div:nth-child(8)  em { width: 70px; }
+#view-dashboard-patient .patient-shell.pt-loading .patient-connection-card em {
+  display: inline-block; width: 60px; height: 13px;
+  border-radius: var(--pt-radius-xs); vertical-align: middle;
+}
+
+/* ── Transiciones de reveal ───────────────────────────── */
+#view-dashboard-patient .pt-hero-overlay,
+#view-dashboard-patient .pt-alert-card,
+#view-dashboard-patient .pt-metric-widget,
+#view-dashboard-patient .pt-timer-card,
+#view-dashboard-patient .patient-profile-card,
+#view-dashboard-patient .patient-connection-card {
+  transition: opacity var(--pt-duration-slow) var(--pt-ease-out);
+}
+#view-dashboard-patient .patient-shell.pt-loading .pt-timer-card,
+#view-dashboard-patient .patient-shell.pt-loading .pt-metric-widget { opacity: .85; }
+#view-dashboard-patient .patient-shell.pt-loading .pt-export-row {
+  opacity: 0; pointer-events: none;
+}

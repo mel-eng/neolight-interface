@@ -104,6 +104,46 @@ export async function initPatientDashboard(sessionSnapshot) {
   bindPatientEvents(paciente?.id);
   loadPatientHistory(paciente?.id);
   scheduleTutorPolling();
+
+  // Todos los datos están en el DOM — revelar el dashboard
+  markPatientReady();
+}
+
+// =========================================================
+// SKELETON — LOADING STATE
+// =========================================================
+
+/**
+ * Remueve el estado de carga del shell.
+ * Se llama al final de initPatientDashboard, una vez que
+ * todos los datos clínicos ya fueron escritos en el DOM.
+ * El pequeño requestAnimationFrame garantiza que el browser
+ * haya pintado los datos antes de que arranque el fade-out.
+ */
+function markPatientReady() {
+  const shell = document.querySelector(
+    "#view-dashboard-patient .patient-shell"
+  );
+  if (!shell) return;
+
+  // Esperar al próximo frame para asegurar que el paint ya ocurrió
+  requestAnimationFrame(() => {
+    shell.classList.remove("pt-loading");
+    shell.removeAttribute("aria-busy");
+  });
+}
+
+/**
+ * Vuelve a activar el skeleton. Útil si se necesita mostrar
+ * un estado de recarga (por ejemplo, al refrescar datos del tutor).
+ */
+export function markPatientLoading() {
+  const shell = document.querySelector(
+    "#view-dashboard-patient .patient-shell"
+  );
+  if (!shell) return;
+  shell.classList.add("pt-loading");
+  shell.setAttribute("aria-busy", "true");
 }
 
 // =========================================================
