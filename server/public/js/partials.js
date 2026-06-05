@@ -49,8 +49,25 @@ export async function loadPartial(file) {
     const html = await res.text();
     container.innerHTML = html;
     _loaded.add(file);
+
+    // Exponer openAuthModal en window tras inyectar el partial,
+    // por si algún handler inline (onclick="openAuthModal()") lo necesita
+    if (file === "auth-modal.html") {
+      import("./auth.js").then(({ openAuthModal }) => {
+        window.openAuthModal = openAuthModal;
+      }).catch(err => {
+        console.error("[partials] No se pudo exponer openAuthModal en window:", err);
+      });
+    }
   } catch (err) {
-    console.error(`[partials] Error cargando ${file}:`, err);
+    if (file === "auth-modal.html") {
+      console.error(
+        `[partials] CRÍTICO: no se pudo cargar ${file}. ` +
+        `El modal de login no funcionará. Error:`, err
+      );
+    } else {
+      console.error(`[partials] Error cargando ${file}:`, err);
+    }
     container.innerHTML = `<div style="padding:2rem;color:var(--danger)">
       Error cargando interfaz. Recarga la página.
     </div>`;

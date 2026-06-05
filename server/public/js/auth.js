@@ -10,9 +10,14 @@ import { verifyHospitalCode, fetchDoctors, registerDoctor, registerTutor, login,
 // =========================================================
 // REFERENCIAS DOM
 // =========================================================
-const authModal    = $("authModal");
-const authBackdrop = $("authBackdrop");
-const authCloseBtn = $("authCloseBtn");
+// REFERENCIAS DOM — lazy
+// auth-modal.html se inyecta dinámicamente después de que
+// este módulo se evalúa; acceder al DOM en tiempo de módulo
+// devuelve null. Cada función resuelve el elemento al llamarse.
+// =========================================================
+const authModal    = () => $("authModal");
+const authBackdrop = () => $("authBackdrop");
+const authCloseBtn = () => $("authCloseBtn");
 let   lastFocusEl  = null;
 let   authBound    = false;
 
@@ -71,19 +76,24 @@ export function showAuthView(idToShow) {
 }
 
 export function openAuthModal(initialView = "loginView") {
-  if (!authModal) return;
+  const modal = authModal();
+  if (!modal) {
+    console.error("[auth] openAuthModal: #authModal no encontrado en el DOM. ¿Se cargó auth-modal.html?");
+    return;
+  }
   lastFocusEl = document.activeElement;
-  authModal.classList.add("open");
-  authModal.setAttribute("aria-hidden", "false");
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
   showAuthView(initialView);
   setTimeout(() => { if (initialView === "loginView") $("usuario")?.focus(); }, 80);
 }
 
 export function closeAuthModal() {
-  if (!authModal) return;
-  authModal.classList.remove("open");
-  authModal.setAttribute("aria-hidden", "true");
+  const modal = authModal();
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
   try { lastFocusEl?.focus?.(); } catch (_) {}
 }
@@ -429,10 +439,10 @@ export function initAuth() {
   authBound = true;
   bindEyeButtons();
 
-  authBackdrop?.addEventListener("click", closeAuthModal);
-  authCloseBtn?.addEventListener("click", closeAuthModal);
+  authBackdrop()?.addEventListener("click", closeAuthModal);
+  authCloseBtn()?.addEventListener("click", closeAuthModal);
   window.addEventListener("keydown", e => {
-    if (e.key === "Escape" && authModal?.classList.contains("open")) closeAuthModal();
+    if (e.key === "Escape" && authModal()?.classList.contains("open")) closeAuthModal();
   });
 
   // Keypad del código
