@@ -1,0 +1,505 @@
+/* =========================================================
+   NEOLIGHT — tokens-patient.css
+   Design tokens exclusivos del panel de paciente / tutor.
+   Scoped a #view-dashboard-patient para no contaminar el
+   resto del sistema.
+
+   Estructura:
+     1. Paleta clínica primitiva (valores raw)
+     2. Tokens semánticos de color
+     3. Tokens de superficie y fondo
+     4. Tokens de estado clínico (ok / warn / danger / info)
+     5. Tokens de tipografía del panel
+     6. Tokens de espaciado y layout
+     7. Tokens de sombra y elevación
+     8. Tokens de borde y radio
+     9. Tokens de animación
+    10. Soporte dark mode
+   ========================================================= */
+
+
+/* =========================================================
+   1. PALETA CLÍNICA PRIMITIVA
+   Colores raw — no usar directamente en componentes.
+   Referenciar solo desde tokens semánticos (sección 2+).
+   ========================================================= */
+:root {
+  /* Púrpura clínico — color principal del panel paciente */
+  --pt-prim-50:  #f4f0ff;
+  --pt-prim-100: #efeaff;
+  --pt-prim-200: #ded8ff;
+  --pt-prim-300: #c8b8ef;
+  --pt-prim-400: #b9adff;
+  --pt-prim-500: #7c6be8;   /* base */
+  --pt-prim-600: #6a59d4;
+  --pt-prim-700: #5a48d4;
+  --pt-prim-800: #4a3cb0;
+  --pt-prim-900: #2d1f62;
+
+  /* Lavanda — surface y fondos suaves */
+  --pt-lav-50:  #fbfaff;
+  --pt-lav-100: #f6f4ff;
+  --pt-lav-200: #ede8f8;
+  --pt-lav-300: #d9d0f5;
+  --pt-lav-400: #a88cff;
+
+  /* Azul clínico — info / conexión / temperatura */
+  --pt-blue-50:  #f0f8ff;
+  --pt-blue-100: #dff3ff;
+  --pt-blue-200: #c3e4f5;
+  --pt-blue-300: #5b9bd5;
+  --pt-blue-400: #3d6e9a;
+
+  /* Verde menta — estado ok / temperatura normal */
+  --pt-green-50:  #edf7f1;
+  --pt-green-100: #c8edd6;
+  --pt-green-200: #81c784;
+  --pt-green-300: #4a8c5c;
+  --pt-green-400: #2e6644;
+
+  /* Rosa — temperatura bebé / alertas suaves */
+  --pt-rose-50:  #fff4f8;
+  --pt-rose-100: #fff0f5;
+  --pt-rose-200: #f7c7da;
+  --pt-rose-300: #e6537b;
+  --pt-rose-400: #d84c72;
+  --pt-rose-500: #cc3d66;
+
+  /* Ámbar — advertencias / bilirrubina / timer */
+  --pt-amber-50:  #fff8df;
+  --pt-amber-100: #fff7dc;
+  --pt-amber-200: #f8e6a8;
+  --pt-amber-300: #d9a82e;
+  --pt-amber-400: #7a5a10;
+
+  /* Rojo crítico — alarmas / peligro */
+  --pt-red-500: #c62828;
+  --pt-red-400: #e57373;
+
+  /* Tinta / texto */
+  --pt-ink-900: #0d0923;
+  --pt-ink-800: #1a1535;
+  --pt-ink-700: #2d2a45;   /* texto principal */
+  --pt-ink-600: #3d3475;
+  --pt-ink-500: #514b72;
+  --pt-ink-400: #767998;
+  --pt-ink-300: #7b7b94;
+  --pt-ink-200: #8aa0b0;
+  --pt-ink-100: #557f98;
+
+  /* Neutros de superficie */
+  --pt-white:    #ffffff;
+  --pt-near-white: #fbfaff;
+  --pt-surf-100: #f8fafb;
+  --pt-surf-200: #f5f4ff;
+  --pt-surf-300: #f4f0ff;
+}
+
+
+/* =========================================================
+   2. TOKENS SEMÁNTICOS DE COLOR
+   Scoped a #view-dashboard-patient
+   ========================================================= */
+#view-dashboard-patient {
+
+  /* ── Color principal / acento ── */
+  --pt-color-primary:       var(--pt-prim-500);
+  --pt-color-primary-dark:  var(--pt-prim-700);
+  --pt-color-primary-light: var(--pt-prim-400);
+  --pt-color-primary-soft:  var(--pt-prim-100);
+  --pt-color-primary-subtle: rgba(124, 107, 232, 0.08);
+
+  /* ── Texto ── */
+  --pt-color-text:          var(--pt-ink-700);
+  --pt-color-text-strong:   var(--pt-ink-900);
+  --pt-color-text-muted:    var(--pt-ink-300);
+  --pt-color-text-subtle:   var(--pt-ink-400);
+  --pt-color-text-inverse:  var(--pt-white);
+  --pt-color-text-accent:   var(--pt-prim-500);
+
+  /* ── Bordes ── */
+  --pt-color-border:        rgba(124, 107, 232, 0.12);
+  --pt-color-border-medium: rgba(124, 107, 232, 0.18);
+  --pt-color-border-strong: rgba(124, 107, 232, 0.28);
+  --pt-color-border-subtle: rgba(124, 107, 232, 0.06);
+  --pt-color-border-blue:   rgba(102, 138, 160, 0.12);
+
+  /* ── Superficies / fondos ── */
+  --pt-color-bg:            var(--pt-lav-100);
+  --pt-color-surface:       var(--pt-white);
+  --pt-color-surface-alt:   var(--pt-near-white);
+  --pt-color-surface-tinted: rgba(255, 255, 255, 0.86);
+  --pt-color-surface-glass: rgba(255, 255, 255, 0.72);
+  --pt-color-surface-hover: var(--pt-prim-100);
+
+  /* Gradiente de héroe */
+  --pt-gradient-hero: linear-gradient(
+    135deg,
+    var(--pt-prim-100) 0%,
+    var(--pt-blue-100) 58%,
+    var(--pt-white) 100%
+  );
+
+  /* Gradiente de marca */
+  --pt-gradient-brand: linear-gradient(
+    135deg,
+    var(--pt-prim-500),
+    var(--pt-prim-400)
+  );
+}
+
+
+/* =========================================================
+   3. TOKENS DE ESTADO CLÍNICO
+   Semáforo médico: ok / warn / danger / info / neutral
+   ========================================================= */
+#view-dashboard-patient {
+
+  /* OK — temperatura normal, distancia correcta, sin alertas */
+  --pt-state-ok-text:    #2e6644;
+  --pt-state-ok-bg:      var(--pt-green-100);
+  --pt-state-ok-border:  var(--pt-green-200);
+  --pt-state-ok-icon:    var(--pt-green-300);
+  --pt-state-ok-dot:     var(--pt-green-200);
+
+  /* WARN — fuera de rango suave, bilirrubina elevada, timer pausado */
+  --pt-state-warn-text:   var(--pt-amber-400);
+  --pt-state-warn-bg:     var(--pt-amber-100);
+  --pt-state-warn-border: var(--pt-amber-200);
+  --pt-state-warn-icon:   var(--pt-amber-300);
+  --pt-state-warn-dot:    var(--pt-amber-300);
+
+  /* DANGER — alarma crítica, temperatura peligrosa, muy cerca */
+  --pt-state-danger-text:   var(--pt-red-500);
+  --pt-state-danger-bg:     #fff0f5;
+  --pt-state-danger-border: var(--pt-rose-200);
+  --pt-state-danger-icon:   var(--pt-rose-300);
+  --pt-state-danger-dot:    var(--pt-red-500);
+
+  /* INFO — conexión ESP32, modo actual, datos clínicos */
+  --pt-state-info-text:   var(--pt-blue-400);
+  --pt-state-info-bg:     var(--pt-blue-100);
+  --pt-state-info-border: var(--pt-blue-200);
+  --pt-state-info-icon:   var(--pt-blue-300);
+  --pt-state-info-dot:    var(--pt-blue-300);
+
+  /* NEUTRAL — sin datos, esperando lectura, reposo */
+  --pt-state-neutral-text:   var(--pt-ink-300);
+  --pt-state-neutral-bg:     var(--pt-surf-100);
+  --pt-state-neutral-border: rgba(124, 107, 232, 0.10);
+  --pt-state-neutral-dot:    var(--pt-ink-400);
+
+  /* Alias convenientes para el JS (matchea con los strings del código) */
+  --pt-color-ok:     var(--pt-state-ok-icon);
+  --pt-color-warn:   var(--pt-state-warn-icon);
+  --pt-color-danger: var(--pt-state-danger-icon);
+  --pt-color-info:   var(--pt-state-info-icon);
+}
+
+
+/* =========================================================
+   4. TOKENS DE TIPOGRAFÍA DEL PANEL
+   Escala tipográfica específica para el dashboard paciente.
+   Usa Inter / Space Mono del sistema global.
+   ========================================================= */
+#view-dashboard-patient {
+
+  /* ── Familias ── */
+  --pt-font-display: 'Inter', system-ui, sans-serif;
+  --pt-font-body:    'Inter', system-ui, sans-serif;
+  --pt-font-mono:    'Space Mono', ui-monospace, monospace;
+  --pt-font-data:    'Space Mono', ui-monospace, monospace;  /* valores de sensores */
+
+  /* ── Escala de tamaños ── */
+  --pt-text-2xs:  .58rem;   /* badges muy pequeños, copyright */
+  --pt-text-xs:   .65rem;   /* labels de eje, marcas de tiempo compactas */
+  --pt-text-sm:   .72rem;   /* labels de widget, estado de sensor */
+  --pt-text-base: .82rem;   /* texto de cuerpo en cards */
+  --pt-text-md:   .95rem;   /* datos clínicos, filas de datos */
+  --pt-text-lg:   1.05rem;  /* títulos de sección secundaria */
+  --pt-text-xl:   1.25rem;  /* valores de métricas principales */
+  --pt-text-2xl:  1.7rem;   /* timer, valores hero */
+  --pt-text-3xl:  2rem;     /* heading principal del dashboard */
+  --pt-text-hero: clamp(1.7rem, 3vw, 2.65rem); /* h1 del hero card */
+
+  /* ── Pesos ── */
+  --pt-weight-normal:   400;
+  --pt-weight-medium:   500;
+  --pt-weight-semibold: 600;
+  --pt-weight-bold:     700;
+  --pt-weight-extrabold: 800;
+  --pt-weight-black:    900;
+
+  /* ── Letter spacing ── */
+  --pt-tracking-tight:  -.02em;
+  --pt-tracking-normal:  0;
+  --pt-tracking-caps:    .08em;  /* kickers en mayúsculas */
+  --pt-tracking-mono:    .04em;  /* valores monoespaciados */
+  --pt-tracking-label:   .12em;  /* labels de sensor */
+
+  /* ── Interlineado ── */
+  --pt-leading-tight:   1.05;
+  --pt-leading-snug:    1.25;
+  --pt-leading-normal:  1.5;
+  --pt-leading-relaxed: 1.7;
+
+  /* ── Roles semánticos de texto ── */
+  --pt-font-kicker:     var(--pt-font-display);
+  --pt-font-metric:     var(--pt-font-data);    /* valores numéricos de sensores */
+  --pt-font-label:      var(--pt-font-body);
+  --pt-font-status:     var(--pt-font-body);
+  --pt-font-timer:      var(--pt-font-mono);
+}
+
+
+/* =========================================================
+   5. TOKENS DE ESPACIADO Y LAYOUT
+   ========================================================= */
+#view-dashboard-patient {
+
+  /* ── Escala de espaciado (múltiplos de 4px) ── */
+  --pt-space-1:  4px;
+  --pt-space-2:  8px;
+  --pt-space-3:  12px;
+  --pt-space-4:  16px;
+  --pt-space-5:  20px;
+  --pt-space-6:  24px;
+  --pt-space-8:  32px;
+  --pt-space-10: 40px;
+  --pt-space-12: 48px;
+
+  /* ── Alias de espaciado semántico ── */
+  --pt-gap-xs:   var(--pt-space-2);   /* gap entre íconos y labels */
+  --pt-gap-sm:   var(--pt-space-3);   /* gap interno de badges */
+  --pt-gap-md:   var(--pt-space-4);   /* gap entre widgets */
+  --pt-gap-lg:   var(--pt-space-6);   /* gap entre secciones */
+  --pt-gap-xl:   var(--pt-space-8);   /* gap entre columnas del layout */
+
+  --pt-pad-xs:   var(--pt-space-2);   /* padding de badges/pills */
+  --pt-pad-sm:   var(--pt-space-3);   /* padding de labels compactos */
+  --pt-pad-md:   var(--pt-space-4);   /* padding de cards pequeñas */
+  --pt-pad-lg:   var(--pt-space-6);   /* padding de cards estándar */
+  --pt-pad-xl:   var(--pt-space-8);   /* padding de cards grandes */
+
+  /* ── Dimensiones del layout del shell ── */
+  --pt-sidebar-width:    92px;
+  --pt-rail-width:       306px;
+  --pt-sidebar-gap:      .55rem;
+  --pt-metric-min-width: 120px;
+
+  /* ── Dimensiones de componentes ── */
+  --pt-nav-item-height:  58px;
+  --pt-avatar-size:      48px;
+  --pt-avatar-size-lg:   64px;
+  --pt-icon-size-sm:     16px;
+  --pt-icon-size-md:     20px;
+  --pt-icon-size-lg:     32px;
+  --pt-dot-size:         8px;
+
+  /* ── Alturas de barra de progreso ── */
+  --pt-bar-height-sm:   4px;
+  --pt-bar-height-md:   6px;
+  --pt-bar-height-lg:   8px;
+}
+
+
+/* =========================================================
+   6. TOKENS DE SOMBRA Y ELEVACIÓN
+   ========================================================= */
+#view-dashboard-patient {
+
+  /* Elevación 0 — sin sombra (inputs, tablas) */
+  --pt-shadow-none: none;
+
+  /* Elevación 1 — cards planas, widgets de métrica */
+  --pt-shadow-sm: 0 2px 12px rgba(124, 107, 232, 0.06),
+                  0 1px 4px  rgba(124, 107, 232, 0.04);
+
+  /* Elevación 2 — cards principales, sidebar */
+  --pt-shadow-md: 0 8px 28px rgba(124, 107, 232, 0.10),
+                  0 2px 8px  rgba(124, 107, 232, 0.06);
+
+  /* Elevación 3 — hero card, right rail */
+  --pt-shadow-lg: 0 18px 42px rgba(124, 107, 232, 0.13),
+                  0 4px 14px rgba(124, 107, 232, 0.08);
+
+  /* Elevación 4 — modales, toasts, overlays */
+  --pt-shadow-xl: 0 24px 60px rgba(124, 107, 232, 0.18),
+                  0 8px 20px rgba(124, 107, 232, 0.10);
+
+  /* Sombra de hover (se añade on :hover) */
+  --pt-shadow-hover: 0 12px 36px rgba(124, 107, 232, 0.18),
+                     0 4px 12px rgba(124, 107, 232, 0.10);
+
+  /* Sombra de la sidebar */
+  --pt-shadow-sidebar: 0 18px 40px rgba(124, 107, 232, 0.11);
+
+  /* Glow del estado de alarma activa */
+  --pt-shadow-alert: 0 0 0 3px rgba(198, 40, 40, 0.15);
+
+  /* Alias de compatibilidad con el código existente */
+  --pt-shadow:      var(--pt-shadow-md);
+  --pt-shadow-soft: var(--pt-shadow-sm);
+}
+
+
+/* =========================================================
+   7. TOKENS DE BORDE Y RADIO
+   ========================================================= */
+#view-dashboard-patient {
+
+  /* ── Radios ── */
+  --pt-radius-xs:   6px;    /* badges, dots, inputs pequeños */
+  --pt-radius-sm:   10px;   /* botones, inputs estándar */
+  --pt-radius-md:   16px;   /* cards pequeñas, chips */
+  --pt-radius-lg:   20px;   /* cards estándar */
+  --pt-radius-xl:   24px;   /* sidebar, cards grandes */
+  --pt-radius-2xl:  28px;   /* hero card */
+  --pt-radius-full: 999px;  /* pills, badges */
+  --pt-radius-circle: 50%;  /* avatares */
+
+  /* Alias de compatibilidad */
+  --pt-radius: var(--pt-radius-lg);
+
+  /* ── Anchos de borde ── */
+  --pt-border-width:    1px;
+  --pt-border-width-md: 1.5px;
+  --pt-border-width-lg: 2px;
+}
+
+
+/* =========================================================
+   8. TOKENS DE ANIMACIÓN
+   ========================================================= */
+#view-dashboard-patient {
+
+  /* ── Duraciones ── */
+  --pt-duration-instant: 80ms;
+  --pt-duration-fast:    150ms;
+  --pt-duration-base:    200ms;
+  --pt-duration-slow:    350ms;
+  --pt-duration-enter:   400ms;
+
+  /* ── Easings ── */
+  --pt-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --pt-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --pt-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Transición estándar para hover de cards ── */
+  --pt-transition-card: transform var(--pt-duration-base) var(--pt-ease-out),
+                        box-shadow var(--pt-duration-base) var(--pt-ease-out);
+
+  /* ── Transición para cambios de color/opacidad ── */
+  --pt-transition-color: color var(--pt-duration-fast) var(--pt-ease-in-out),
+                         background-color var(--pt-duration-fast) var(--pt-ease-in-out),
+                         border-color var(--pt-duration-fast) var(--pt-ease-in-out),
+                         opacity var(--pt-duration-fast) var(--pt-ease-in-out);
+}
+
+
+/* =========================================================
+   9. DARK MODE
+   Ajusta solo los tokens que cambian en modo oscuro.
+   Los tokens de layout/tipografía/animación son invariantes.
+   ========================================================= */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Reajusta primitivos para dark */
+    --pt-prim-100: #2a2350;
+    --pt-prim-200: #3a3068;
+    --pt-prim-400: #9a8ef5;
+    --pt-prim-500: #9d8ef5;
+    --pt-prim-700: #b9adff;
+
+    --pt-lav-100:  #18152e;
+    --pt-lav-200:  #211c3d;
+    --pt-lav-300:  #2e2858;
+
+    --pt-ink-700:  #e2deff;
+    --pt-ink-300:  #9d9ab8;
+    --pt-ink-400:  #7b789a;
+
+    --pt-white:    #1e1a38;
+    --pt-near-white: #1a172e;
+    --pt-surf-100: #201c38;
+    --pt-surf-200: #211e3a;
+  }
+
+  #view-dashboard-patient {
+    --pt-color-bg:            #16132c;
+    --pt-color-surface:       #1e1a38;
+    --pt-color-surface-alt:   #201c38;
+    --pt-color-surface-tinted: rgba(30, 26, 56, 0.92);
+    --pt-color-surface-glass: rgba(30, 26, 56, 0.72);
+    --pt-color-surface-hover: rgba(124, 107, 232, 0.15);
+
+    --pt-color-border:        rgba(124, 107, 232, 0.20);
+    --pt-color-border-medium: rgba(124, 107, 232, 0.28);
+    --pt-color-border-strong: rgba(124, 107, 232, 0.40);
+    --pt-color-border-subtle: rgba(124, 107, 232, 0.10);
+
+    --pt-color-text:        #e2deff;
+    --pt-color-text-strong: #f0eeff;
+    --pt-color-text-muted:  #9d9ab8;
+    --pt-color-text-subtle: #7b789a;
+
+    --pt-gradient-hero: linear-gradient(
+      135deg,
+      rgba(42, 35, 80, 0.95) 0%,
+      rgba(30, 58, 80, 0.90) 58%,
+      rgba(30, 26, 56, 1.0) 100%
+    );
+
+    /* Estados clínicos en dark */
+    --pt-state-ok-bg:      rgba(46, 102, 68, 0.20);
+    --pt-state-warn-bg:    rgba(122, 90, 16, 0.20);
+    --pt-state-danger-bg:  rgba(198, 40, 40, 0.18);
+    --pt-state-info-bg:    rgba(61, 110, 154, 0.20);
+    --pt-state-neutral-bg: rgba(30, 26, 56, 0.60);
+  }
+}
+
+
+/* =========================================================
+   10. UTILIDADES DE TOKEN — clases de conveniencia
+   Para aplicar estados clínicos directamente en HTML.
+   ========================================================= */
+#view-dashboard-patient .pt-state-ok {
+  color: var(--pt-state-ok-text);
+  background: var(--pt-state-ok-bg);
+  border-color: var(--pt-state-ok-border);
+}
+#view-dashboard-patient .pt-state-warn {
+  color: var(--pt-state-warn-text);
+  background: var(--pt-state-warn-bg);
+  border-color: var(--pt-state-warn-border);
+}
+#view-dashboard-patient .pt-state-danger {
+  color: var(--pt-state-danger-text);
+  background: var(--pt-state-danger-bg);
+  border-color: var(--pt-state-danger-border);
+}
+#view-dashboard-patient .pt-state-info {
+  color: var(--pt-state-info-text);
+  background: var(--pt-state-info-bg);
+  border-color: var(--pt-state-info-border);
+}
+#view-dashboard-patient .pt-state-neutral {
+  color: var(--pt-state-neutral-text);
+  background: var(--pt-state-neutral-bg);
+  border-color: var(--pt-state-neutral-border);
+}
+
+/* Dot de estado (indicador de conexión / sensor) */
+#view-dashboard-patient .pt-dot {
+  display: inline-block;
+  width: var(--pt-dot-size);
+  height: var(--pt-dot-size);
+  border-radius: var(--pt-radius-circle);
+  flex-shrink: 0;
+}
+#view-dashboard-patient .pt-dot[data-status="ok"]      { background: var(--pt-state-ok-dot); }
+#view-dashboard-patient .pt-dot[data-status="warn"]    { background: var(--pt-state-warn-dot); }
+#view-dashboard-patient .pt-dot[data-status="danger"]  { background: var(--pt-state-danger-dot); }
+#view-dashboard-patient .pt-dot[data-status="info"]    { background: var(--pt-state-info-dot); }
+#view-dashboard-patient .pt-dot[data-status="neutral"] { background: var(--pt-state-neutral-dot); }
