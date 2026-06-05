@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    NEOLIGHT — styles.css  v2.0
    Paleta neonatal: soft pastels, suave, clínica, luminosa
    ========================================================= */
@@ -5378,7 +5378,7 @@ background: #fff !important;
   cursor: pointer;
 }
 
-/* ──────────────────────────────────────────────────────────────
+/* ────────��─────────────────────────────────────────────────────
    FIX 5 · Panel derecho: tabs más legibles, separadores perfil
    ────────────────────────────────────────────────────────────── */
 #view-dashboard-patient .pt-tab {
@@ -7327,4 +7327,1432 @@ body:has(#view-dashboard-patient.active) .btn-nav:hover {
 /* ── Profile card: sección limpia sin decorativos ── */
 #view-dashboard-patient .patient-profile-card {
   padding-top: 22px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PATIENT DASHBOARD — PREMIUM CLINICAL REDESIGN v4.0
+   Matches doctor dashboard aesthetic: calm, professional, pediatric-elegant
+   Preserves all HTML IDs/classes and JavaScript hooks
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DESIGN TOKENS — Soft clinical palette
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient {
+  --pt-bg: #f8fafb;
+  --pt-card: #ffffff;
+  --pt-ink: #1e2a38;
+  --pt-muted: #6b7a8c;
+  --pt-accent: #668aa0;
+  --pt-accent-soft: rgba(102,138,160,.12);
+  --pt-lavender: #e8eaf6;
+  --pt-lavender-deep: #c5cae9;
+  --pt-mint: #e0f2f1;
+  --pt-mint-deep: #b2dfdb;
+  --pt-blush: #fce4ec;
+  --pt-blush-deep: #f8bbd0;
+  --pt-cream: #fffde7;
+  --pt-border: rgba(102,138,160,.14);
+  --pt-shadow: 0 4px 24px rgba(30,42,56,.06), 0 1px 4px rgba(30,42,56,.04);
+  --pt-shadow-hover: 0 8px 32px rgba(30,42,56,.09), 0 2px 8px rgba(30,42,56,.05);
+  --pt-radius: 16px;
+  --pt-radius-lg: 24px;
+  --pt-radius-sm: 10px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BODY BACKGROUND when patient dashboard is active
+   ───────────────────────────────────────────────────────────────────────── */
+body:has(#view-dashboard-patient.active) {
+  background:
+    radial-gradient(ellipse at 8% 12%, rgba(232,234,246,.45) 0%, transparent 40%),
+    radial-gradient(ellipse at 92% 88%, rgba(224,242,241,.35) 0%, transparent 40%),
+    linear-gradient(180deg, #f8fafb 0%, #f4f7f9 100%);
+}
+
+body:has(#view-dashboard-patient.active) .topbar {
+  background: rgba(255,255,255,.94);
+  border-bottom-color: rgba(102,138,160,.12);
+}
+
+body:has(#view-dashboard-patient.active) .btn-nav {
+  background: rgba(255,255,255,.8);
+  border-color: rgba(102,138,160,.18);
+}
+
+body:has(#view-dashboard-patient.active) .btn-nav:hover {
+  background: var(--pt-lavender);
+  border-color: var(--pt-accent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MAIN SHELL — Clean 3-column grid aligned with header
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-shell {
+  min-height: calc(100vh - var(--navH, 68px));
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 300px;
+  gap: 20px;
+  padding: 20px 24px 24px 0;
+  position: relative;
+  overflow: visible;
+  background: transparent;
+}
+
+/* Remove decorative pseudo-elements */
+#view-dashboard-patient .patient-shell::before,
+#view-dashboard-patient .patient-shell::after {
+  display: none !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SIDEBAR — Clean, integrated with header, doctor-style
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-sidebar {
+  position: sticky;
+  top: var(--navH, 68px);
+  z-index: 30;
+  height: calc(100vh - var(--navH, 68px));
+  width: 72px;
+  border-radius: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafb 100%);
+  border: none;
+  border-right: 1px solid var(--pt-border);
+  box-shadow: 2px 0 16px rgba(30,42,56,.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 8px 20px;
+  gap: 8px;
+}
+
+#view-dashboard-patient .patient-sidebar::before,
+#view-dashboard-patient .patient-sidebar::after {
+  display: none !important;
+}
+
+/* Bell button — clean and minimal */
+#view-dashboard-patient .pt-sidebar-bell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+#view-dashboard-patient .pt-bell-btn {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius-sm);
+  background: var(--pt-card);
+  color: var(--pt-accent);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: var(--pt-shadow);
+  transition: all .2s ease;
+  position: relative;
+}
+
+#view-dashboard-patient .pt-bell-btn:hover {
+  background: var(--pt-lavender);
+  border-color: var(--pt-accent);
+  transform: translateY(-1px);
+  box-shadow: var(--pt-shadow-hover);
+}
+
+#view-dashboard-patient .pt-bell-btn .pt-nav-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+}
+
+#view-dashboard-patient .pt-bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e57373;
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(229,115,115,.35);
+}
+
+#view-dashboard-patient .pt-bell-badge:not(:empty) {
+  display: inline-flex;
+}
+
+/* Navigation items — clean doctor style */
+#view-dashboard-patient .patient-nav {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  flex: 1;
+  padding: 8px 0;
+}
+
+#view-dashboard-patient .patient-nav-item {
+  width: 56px;
+  min-height: 52px;
+  border: none;
+  background: transparent;
+  color: var(--pt-muted);
+  border-radius: var(--pt-radius-sm);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: var(--font-nav);
+  font-weight: 600;
+  font-size: .58rem;
+  line-height: 1.1;
+  letter-spacing: .02em;
+  transition: all .18s ease;
+}
+
+#view-dashboard-patient .patient-nav-item:hover {
+  background: var(--pt-accent-soft);
+  color: var(--pt-accent);
+}
+
+#view-dashboard-patient .patient-nav-item.active {
+  background: var(--pt-accent);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(102,138,160,.25);
+}
+
+#view-dashboard-patient .pt-nav-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+/* Sidebar footer */
+#view-dashboard-patient .pt-sidebar-foot {
+  width: 100%;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--pt-border);
+}
+
+#view-dashboard-patient .pt-esp-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: .52rem;
+  font-weight: 700;
+  color: var(--pt-muted);
+  line-height: 1;
+  text-align: center;
+}
+
+#view-dashboard-patient .pt-esp-lbl {
+  font-size: .5rem;
+  max-width: 54px;
+  word-wrap: break-word;
+}
+
+#view-dashboard-patient .esp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #81c784;
+  box-shadow: 0 0 0 3px rgba(129,199,132,.2);
+}
+
+#view-dashboard-patient .esp-dot.is-disconnected {
+  background: #e57373;
+  box-shadow: 0 0 0 3px rgba(229,115,115,.2);
+}
+
+#view-dashboard-patient .esp-dot.is-warning {
+  background: #ffb74d;
+  box-shadow: 0 0 0 3px rgba(255,183,77,.2);
+}
+
+#view-dashboard-patient .pt-sidebar-logout {
+  color: var(--pt-muted);
+}
+
+#view-dashboard-patient .pt-sidebar-logout:hover {
+  background: rgba(229,115,115,.1);
+  color: #c62828;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MAIN CONTENT AREA
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-main {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#view-dashboard-patient .patient-section {
+  display: none;
+}
+
+#view-dashboard-patient .patient-section.active {
+  display: block;
+  animation: ptFadeIn .25s ease both;
+}
+
+@keyframes ptFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TOP GRID — Hero + side cards aligned perfectly
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   HERO CARD — Clean, balanced, professional
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-hero-card {
+  position: relative;
+  min-height: 380px;
+  border-radius: var(--pt-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--pt-border);
+  background: var(--pt-card);
+  box-shadow: var(--pt-shadow);
+}
+
+#view-dashboard-patient .pt-hero-video,
+#view-dashboard-patient .pt-camera-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  min-height: unset;
+  background: linear-gradient(135deg, var(--pt-lavender) 0%, var(--pt-mint) 100%);
+}
+
+#view-dashboard-patient .pt-camera-video {
+  display: none;
+}
+
+#view-dashboard-patient .pt-cam-error {
+  position: absolute;
+  inset: 0;
+  background: rgba(248,250,251,.92);
+  color: var(--pt-muted);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  font-weight: 600;
+  font-size: .88rem;
+}
+
+/* Hero overlay — softer, cleaner text */
+#view-dashboard-patient .pt-hero-overlay {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  right: 20px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+#view-dashboard-patient .pt-kicker {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.75);
+  background: rgba(30,42,56,.35);
+  backdrop-filter: blur(8px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+
+#view-dashboard-patient #dashHelloPatient {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,.25);
+}
+
+#view-dashboard-patient .pt-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#view-dashboard-patient .pt-hero-tags span {
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+
+#view-dashboard-patient .pt-hero-tags span b {
+  font-weight: 700;
+}
+
+/* Camera toggle — premium, aligned bottom-left */
+#view-dashboard-patient .pt-cam-btn {
+  position: absolute !important;
+  left: 20px !important;
+  bottom: 20px !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: 10 !important;
+  width: auto !important;
+  height: 36px !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(255,255,255,.25) !important;
+  background: rgba(30,42,56,.6) !important;
+  backdrop-filter: blur(10px) !important;
+  color: #fff !important;
+  padding: 0 14px 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: .72rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all .2s ease !important;
+}
+
+#view-dashboard-patient .pt-cam-btn:hover {
+  background: rgba(30,42,56,.75) !important;
+  border-color: rgba(255,255,255,.35) !important;
+}
+
+#view-dashboard-patient .pt-cam-btn[aria-pressed="true"] {
+  background: var(--pt-accent) !important;
+  border-color: var(--pt-accent) !important;
+}
+
+#view-dashboard-patient .pt-cam-ico {
+  width: 14px;
+  height: 14px;
+}
+
+#view-dashboard-patient .pt-cam-lbl {
+  font-size: .72rem;
+}
+
+#view-dashboard-patient .pt-cam-track {
+  width: 28px !important;
+  height: 16px !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.25) !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+#view-dashboard-patient .pt-cam-thumb {
+  position: absolute !important;
+  left: 2px !important;
+  top: 2px !important;
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  transition: transform .18s ease !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2) !important;
+}
+
+#view-dashboard-patient .pt-cam-btn[aria-pressed="true"] .pt-cam-thumb {
+  transform: translateX(12px) !important;
+}
+
+/* Hidden center metrics (keep for JS but don't display prominently) */
+#view-dashboard-patient .patient-hero-center-metrics {
+  display: none !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SIDE CARDS COLUMN — Alerts, metrics, timer stacked cleanly
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-side-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Alert card — soft, elegant */
+#view-dashboard-patient .pt-alert-card {
+  min-height: 80px;
+  border-radius: var(--pt-radius);
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  box-shadow: var(--pt-shadow);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all .25s ease;
+}
+
+#view-dashboard-patient .pt-alert-card.pt-has-alert {
+  background: linear-gradient(135deg, #fff 0%, var(--pt-blush) 100%);
+  border-color: rgba(229,115,115,.25);
+}
+
+#view-dashboard-patient .pt-ac-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--pt-radius-sm);
+  display: grid;
+  place-items: center;
+  background: var(--pt-lavender);
+  color: var(--pt-accent);
+  flex-shrink: 0;
+}
+
+#view-dashboard-patient .pt-alert-card.pt-has-alert .pt-ac-icon {
+  background: var(--pt-blush);
+  color: #c62828;
+}
+
+#view-dashboard-patient .pt-ac-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+#view-dashboard-patient .pt-ac-body {
+  flex: 1;
+  min-width: 0;
+}
+
+#view-dashboard-patient .pt-ac-title {
+  font-size: .65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--pt-muted);
+  margin-bottom: 4px;
+}
+
+#view-dashboard-patient .pt-ac-msg {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--pt-ink);
+  line-height: 1.3;
+}
+
+#view-dashboard-patient .pt-ac-count {
+  font-size: .68rem;
+  color: #c62828;
+  font-weight: 700;
+  display: none;
+}
+
+#view-dashboard-patient .pt-alert-card.pt-has-alert .pt-ac-count {
+  display: inline;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SENSOR METRICS — 2x2 grid, symmetric, elegant cards
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .pt-side-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+#view-dashboard-patient .pt-metric-widget {
+  min-height: 120px;
+  border-radius: var(--pt-radius);
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  box-shadow: var(--pt-shadow);
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all .2s ease;
+}
+
+#view-dashboard-patient .pt-metric-widget:hover {
+  box-shadow: var(--pt-shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* Subtle gradient backgrounds for each metric */
+#view-dashboard-patient .pt-metric-widget:nth-child(1) {
+  background: linear-gradient(145deg, #fff 0%, var(--pt-lavender) 100%);
+}
+#view-dashboard-patient .pt-metric-widget:nth-child(2) {
+  background: linear-gradient(145deg, #fff 0%, var(--pt-mint) 100%);
+}
+#view-dashboard-patient .pt-metric-widget:nth-child(3) {
+  background: linear-gradient(145deg, #fff 0%, var(--pt-blush) 100%);
+}
+#view-dashboard-patient .pt-metric-widget:nth-child(4) {
+  background: linear-gradient(145deg, #fff 0%, var(--pt-cream) 100%);
+}
+
+#view-dashboard-patient .neo-widget-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--pt-radius-sm);
+  background: rgba(255,255,255,.8);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(30,42,56,.06);
+}
+
+#view-dashboard-patient .neo-widget-icon img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+#view-dashboard-patient .pt-mw-body {
+  min-width: 0;
+  flex: 1;
+}
+
+#view-dashboard-patient .pt-wlbl,
+#view-dashboard-patient .pt-stat-lbl {
+  color: var(--pt-muted);
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+#view-dashboard-patient .pt-wval {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--pt-ink);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+#view-dashboard-patient .pt-metric-widget em {
+  font-style: normal;
+  font-size: .72rem;
+  color: var(--pt-muted);
+  font-weight: 500;
+  display: block;
+}
+
+#view-dashboard-patient .patient-sensor-bar {
+  height: 6px;
+  background: rgba(102,138,160,.15);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 8px 0 6px;
+}
+
+#view-dashboard-patient .patient-sensor-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pt-accent), #81c784);
+  transition: width .3s ease;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TIMER CARD — Premium, same width as hero, clean typography
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .pt-timer-card {
+  border-radius: var(--pt-radius);
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  box-shadow: var(--pt-shadow);
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+#view-dashboard-patient .pt-timer-card:hover {
+  box-shadow: var(--pt-shadow-hover);
+}
+
+#view-dashboard-patient .pt-tc-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+#view-dashboard-patient .pt-tc-info {
+  flex: 1;
+  min-width: 0;
+}
+
+#view-dashboard-patient .pt-tc-val {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--pt-ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+#view-dashboard-patient .pt-timer-card small,
+#view-dashboard-patient .pt-tc-info small {
+  color: var(--pt-muted);
+  font-weight: 500;
+  font-size: .68rem;
+}
+
+#view-dashboard-patient .pt-tc-bar,
+#view-dashboard-patient .patient-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(102,138,160,.12);
+  overflow: hidden;
+  margin: 12px 0 8px;
+}
+
+#view-dashboard-patient .pt-tc-bar span,
+#view-dashboard-patient .patient-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pt-accent), #4db6ac);
+}
+
+#view-dashboard-patient .pt-tc-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#view-dashboard-patient .pt-tc-foot em {
+  font-style: normal;
+  font-size: .72rem;
+  color: var(--pt-muted);
+  font-weight: 500;
+}
+
+#view-dashboard-patient .pt-tc-foot span {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--pt-accent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   EXPORT BUTTONS — Clean, professional
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .pt-export-row {
+  display: flex;
+  gap: 10px;
+}
+
+#view-dashboard-patient .pt-export-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--pt-radius-sm);
+  border: 1px solid var(--pt-border);
+  background: var(--pt-card);
+  color: var(--pt-ink);
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--pt-shadow);
+  transition: all .2s ease;
+}
+
+#view-dashboard-patient .pt-export-btn:hover {
+  background: var(--pt-lavender);
+  border-color: var(--pt-accent);
+}
+
+#view-dashboard-patient .pt-export-btn.pt-export-pdf {
+  border-color: rgba(229,115,115,.2);
+  color: #c62828;
+}
+
+#view-dashboard-patient .pt-export-btn.pt-export-pdf:hover {
+  background: var(--pt-blush);
+  border-color: rgba(229,115,115,.4);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RIGHT PANEL — Clean patient info aligned with dashboard
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-right-rail {
+  position: sticky;
+  top: calc(var(--navH, 68px) + 20px);
+  z-index: 2;
+  height: calc(100vh - var(--navH, 68px) - 44px);
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+/* Hide tabs nav */
+#view-dashboard-patient .pt-tabs-nav {
+  display: none !important;
+}
+
+/* Rail header */
+#view-dashboard-patient .pt-rail-header {
+  padding: 0 0 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--pt-border);
+}
+
+#view-dashboard-patient .pt-rail-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--pt-accent);
+}
+
+/* Profile card */
+#view-dashboard-patient .patient-profile-card {
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius);
+  box-shadow: var(--pt-shadow);
+  padding: 18px;
+  margin-bottom: 0;
+}
+
+#view-dashboard-patient .patient-profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--pt-radius-sm);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--pt-lavender) 0%, var(--pt-mint) 100%);
+  color: var(--pt-accent);
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: 1px solid var(--pt-border);
+  margin-bottom: 12px;
+}
+
+#view-dashboard-patient .patient-profile-card h3 {
+  margin: 0 0 4px;
+  color: var(--pt-ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+#view-dashboard-patient .patient-profile-card > span {
+  display: block;
+  color: var(--pt-muted);
+  font-weight: 500;
+  font-size: .75rem;
+  margin-bottom: 14px;
+}
+
+#view-dashboard-patient .patient-profile-card > div:not(.patient-profile-avatar) {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--pt-border);
+}
+
+#view-dashboard-patient .patient-profile-card > div:last-child {
+  border-bottom: none;
+}
+
+#view-dashboard-patient .patient-profile-card b {
+  color: var(--pt-muted);
+  font-size: .72rem;
+  font-weight: 600;
+}
+
+#view-dashboard-patient .patient-profile-card em {
+  text-align: right;
+  color: var(--pt-ink);
+  font-style: normal;
+  font-weight: 600;
+  font-size: .72rem;
+}
+
+/* Connection card */
+#view-dashboard-patient .patient-connection-card {
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius);
+  box-shadow: var(--pt-shadow);
+  padding: 18px;
+  margin-bottom: 0;
+}
+
+#view-dashboard-patient .patient-connection-card h3 {
+  margin: 0 0 12px;
+  color: var(--pt-ink);
+  font-size: .95rem;
+  font-weight: 700;
+}
+
+#view-dashboard-patient .patient-connection-card > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--pt-border);
+}
+
+#view-dashboard-patient .patient-connection-card > span:last-child {
+  border-bottom: none;
+}
+
+#view-dashboard-patient .patient-connection-card b {
+  color: var(--pt-muted);
+  font-size: .72rem;
+  font-weight: 600;
+}
+
+#view-dashboard-patient .patient-connection-card em {
+  text-align: right;
+  color: var(--pt-ink);
+  font-style: normal;
+  font-weight: 600;
+  font-size: .72rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SECTION HEADERS — Clean typography
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .pt-section-hdr {
+  padding: 8px 0 16px;
+}
+
+#view-dashboard-patient .pt-section-hdr h2 {
+  margin: 0;
+  color: var(--pt-ink);
+  font-size: clamp(1.3rem, 2vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+#view-dashboard-patient .pt-section-hdr p {
+  margin: 4px 0 0;
+  color: var(--pt-muted);
+  font-weight: 500;
+  font-size: .85rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   GENERAL CARDS — Consistent styling
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .patient-card {
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius);
+  box-shadow: var(--pt-shadow);
+  padding: 20px;
+}
+
+#view-dashboard-patient .patient-card h3 {
+  margin: 0 0 14px;
+  color: var(--pt-ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+#view-dashboard-patient .patient-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* Data rows */
+#view-dashboard-patient .data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--pt-border);
+  font-size: .88rem;
+}
+
+#view-dashboard-patient .data-row:last-child {
+  border-bottom: none;
+}
+
+#view-dashboard-patient .data-label {
+  color: var(--pt-muted);
+  font-weight: 500;
+}
+
+#view-dashboard-patient .data-value {
+  color: var(--pt-ink);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Mode controls */
+#view-dashboard-patient .patient-mode-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  color: var(--pt-muted);
+  font-weight: 600;
+  font-size: .88rem;
+}
+
+#view-dashboard-patient .badge {
+  background: var(--pt-lavender);
+  color: var(--pt-accent);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: .72rem;
+}
+
+#view-dashboard-patient .patient-mode-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+#view-dashboard-patient .patient-mode-actions .btn {
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  color: var(--pt-ink);
+  font-weight: 600;
+  border-radius: var(--pt-radius-sm);
+}
+
+#view-dashboard-patient .patient-mode-actions .btn:hover {
+  background: var(--pt-lavender);
+  border-color: var(--pt-accent);
+}
+
+#view-dashboard-patient .patient-mode-actions .btn.btn-primary {
+  background: var(--pt-accent);
+  border-color: var(--pt-accent);
+  color: #fff;
+}
+
+/* Manual controls */
+#view-dashboard-patient .patient-manual-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#view-dashboard-patient .manual-ctrl-btn {
+  padding: 12px 10px;
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius-sm);
+  background: var(--pt-card);
+  color: var(--pt-ink);
+  font-weight: 600;
+  font-size: .75rem;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+#view-dashboard-patient .manual-ctrl-btn:hover {
+  background: var(--pt-lavender);
+  border-color: var(--pt-accent);
+}
+
+#view-dashboard-patient .manual-ctrl-btn.stop {
+  background: var(--pt-blush);
+  border-color: rgba(229,115,115,.3);
+  color: #c62828;
+}
+
+#view-dashboard-patient .manual-ctrl-btn.stop:hover {
+  background: #ffcdd2;
+}
+
+#view-dashboard-patient .manual-ctrl-btn[data-manual-move="up"] {
+  grid-column: 2;
+}
+
+#view-dashboard-patient .manual-ctrl-btn[data-manual-move="down"] {
+  grid-column: 2;
+}
+
+/* Control overlay */
+#view-dashboard-patient .control-overlay {
+  background: rgba(248,250,251,.92);
+  backdrop-filter: blur(8px);
+  border-radius: inherit;
+  padding: 24px;
+}
+
+#view-dashboard-patient .control-overlay strong {
+  color: var(--pt-accent);
+  font-size: .72rem;
+  letter-spacing: .06em;
+}
+
+#view-dashboard-patient .control-overlay p {
+  color: var(--pt-muted);
+  font-size: .88rem;
+  line-height: 1.5;
+}
+
+#view-dashboard-patient .control-overlay-action {
+  margin-top: 14px;
+  padding: 10px 18px;
+  border: 1px solid var(--pt-accent);
+  border-radius: var(--pt-radius-sm);
+  background: var(--pt-accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: .78rem;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+#view-dashboard-patient .control-overlay-action:hover {
+  background: #557f98;
+}
+
+#view-dashboard-patient .control-overlay-action:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TABLES — Clean clinical style
+   ───────────────────────────────────────────────────────────────────────── */
+#view-dashboard-patient .table-wrap {
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius-sm);
+  overflow: hidden;
+}
+
+#view-dashboard-patient .clinical-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#view-dashboard-patient .clinical-table th {
+  background: var(--pt-lavender);
+  color: var(--pt-accent);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+#view-dashboard-patient .clinical-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--pt-border);
+  font-size: .85rem;
+  color: var(--pt-ink);
+}
+
+#view-dashboard-patient .clinical-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Lists */
+#view-dashboard-patient .list,
+#view-dashboard-patient .compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#view-dashboard-patient .item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--pt-radius-sm);
+  border: 1px solid var(--pt-border);
+  background: var(--pt-card);
+  transition: all .18s ease;
+}
+
+#view-dashboard-patient .item:hover {
+  background: var(--pt-lavender);
+  transform: translateX(2px);
+}
+
+#view-dashboard-patient .item .left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#view-dashboard-patient .item .t {
+  font-weight: 700;
+  color: var(--pt-ink);
+  font-size: .9rem;
+}
+
+#view-dashboard-patient .item .s {
+  font-size: .78rem;
+  color: var(--pt-muted);
+}
+
+/* Buttons */
+#view-dashboard-patient .btn {
+  background: var(--pt-card);
+  border: 1px solid var(--pt-border);
+  color: var(--pt-ink);
+  border-radius: var(--pt-radius-sm);
+  font-weight: 600;
+  transition: all .18s ease;
+}
+
+#view-dashboard-patient .btn:hover {
+  background: var(--pt-lavender);
+  border-color: var(--pt-accent);
+}
+
+#view-dashboard-patient .btn-primary {
+  background: var(--pt-accent);
+  border-color: var(--pt-accent);
+  color: #fff;
+}
+
+#view-dashboard-patient .btn-primary:hover {
+  background: #557f98;
+  border-color: #557f98;
+}
+
+#view-dashboard-patient .btn-secondary {
+  background: var(--pt-card);
+  border-color: var(--pt-border);
+  color: var(--pt-ink);
+}
+
+#view-dashboard-patient .btn-secondary:hover {
+  background: var(--pt-lavender);
+}
+
+#view-dashboard-patient .btn-full {
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   RESPONSIVE — Maintain alignment at all sizes
+   ───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  #view-dashboard-patient .patient-shell {
+    grid-template-columns: 68px minmax(0, 1fr) 280px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 1100px) {
+  #view-dashboard-patient .patient-shell {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  #view-dashboard-patient .patient-right-rail {
+    position: relative;
+    top: auto;
+    grid-column: 2;
+    height: auto;
+    max-height: none;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px !important;
+  }
+
+  #view-dashboard-patient .pt-rail-header {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  #view-dashboard-patient .patient-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #view-dashboard-patient .patient-side-cards {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  #view-dashboard-patient .pt-alert-card {
+    flex: 1 1 100%;
+  }
+
+  #view-dashboard-patient .pt-side-metric-grid {
+    flex: 1 1 100%;
+  }
+
+  #view-dashboard-patient .pt-timer-card {
+    flex: 1 1 100%;
+  }
+
+  #view-dashboard-patient .patient-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  #view-dashboard-patient .patient-hero-card {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 700px) {
+  #view-dashboard-patient .patient-shell {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  #view-dashboard-patient .patient-sidebar {
+    position: sticky;
+    top: var(--navH, 68px);
+    width: 100%;
+    height: auto;
+    min-height: 64px;
+    border-radius: 0 0 var(--pt-radius) var(--pt-radius);
+    border-right: none;
+    border-bottom: 1px solid var(--pt-border);
+    flex-direction: row;
+    padding: 8px 12px;
+    overflow-x: auto;
+    gap: 8px;
+  }
+
+  #view-dashboard-patient .pt-sidebar-bell {
+    margin: 0;
+    width: auto;
+  }
+
+  #view-dashboard-patient .pt-bell-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  #view-dashboard-patient .patient-nav {
+    flex-direction: row;
+    width: auto;
+    flex: 1;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 0;
+  }
+
+  #view-dashboard-patient .patient-nav-item {
+    min-width: 56px;
+    min-height: 48px;
+  }
+
+  #view-dashboard-patient .pt-sidebar-foot {
+    width: auto;
+    flex-direction: row;
+    border-top: none;
+    padding-top: 0;
+    gap: 8px;
+  }
+
+  #view-dashboard-patient .pt-esp-status {
+    display: none;
+  }
+
+  #view-dashboard-patient .patient-right-rail {
+    grid-column: 1;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  #view-dashboard-patient .pt-side-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #view-dashboard-patient .patient-hero-card {
+    min-height: 280px;
+  }
+
+  #view-dashboard-patient #dashHelloPatient {
+    font-size: 1.25rem;
+  }
+
+  #view-dashboard-patient .pt-tc-val {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #view-dashboard-patient .patient-shell {
+    padding: 8px;
+  }
+
+  #view-dashboard-patient .patient-mode-actions {
+    grid-template-columns: 1fr;
+  }
+
+  #view-dashboard-patient .patient-manual-controls {
+    grid-template-columns: 1fr;
+  }
+
+  #view-dashboard-patient .manual-ctrl-btn[data-manual-move="up"],
+  #view-dashboard-patient .manual-ctrl-btn[data-manual-move="down"] {
+    grid-column: auto;
+  }
+
+  #view-dashboard-patient .pt-export-row {
+    flex-direction: column;
+  }
+
+  #view-dashboard-patient .pt-hero-tags {
+    gap: 6px;
+  }
+
+  #view-dashboard-patient .pt-hero-tags span {
+    font-size: .68rem;
+    padding: 5px 10px;
+  }
+}
 }
