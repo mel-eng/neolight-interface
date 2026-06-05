@@ -4,7 +4,7 @@
 // conexion ESP32, alarmas, exportacion y control de modo.
 // =========================================================
 
-import { $, state, STORAGE_KEY, normalizeMode, formatEdad, formatDoctorDisplayName } from "./config.js";
+import { $, state, normalizeMode, formatEdad, formatDoctorDisplayName } from "./config.js";
 import { fetchControl, fetchCurrentTutorState, tutorRequestMode, fetchAlarms, fetchSessions, fetchEvents, exportExcel } from "./api.js";
 import {
   socketEmitMute,
@@ -469,14 +469,14 @@ function renderActivePlan(plan) {
 
 function renderSessionTimer(paciente, lastSession, session) {
   const serverSecs = Number(lastSession?.duracion_s || 0);
-  let localMs = 0;
+  const serverMs   = serverSecs * 1000;
 
-  try {
-    localMs = Number(localStorage.getItem(STORAGE_KEY(paciente?.id)) || "0");
-  } catch (_) {}
+  // initTimer crea la instancia de SessionTimer con el UID del paciente
+  // y la combina internamente con lo que haya en storage (sin try/catch aqui)
+  initTimer(serverMs, session?.id || null);
 
-  initTimer(Math.max(serverSecs * 1000, localMs), session?.id || null);
-  const totalLabel = secondsLabel(Math.max(serverSecs, Math.floor(localMs / 1000)));
+  // Etiqueta de resumen para los campos de acumulado
+  const totalLabel = secondsLabel(serverSecs);
   setText("patientTherapyAccumulated", totalLabel);
   setText("patientHeroTime", totalLabel);
 }

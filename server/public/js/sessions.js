@@ -1,169 +1,160 @@
 // =========================================================
 // public/js/sessions.js
-// Maneja: timer de sesión, inicio, pausa, fin, guardado
+// Orquesta el timer de sesion (SessionTimer) con las
+// llamadas de API de inicio, pausa y fin de sesion.
 // =========================================================
 
-import { $, state, STORAGE_KEY } from "./config.js";
+import { $, state } from "./config.js";
 import { startSession, pauseSession, finishSession, saveSessionLegacy } from "./api.js";
+import { SessionTimer } from "./SessionTimer.js";
 
-// =========================================================
-// TIMER
-// =========================================================
-let running = false;
-let startMs = null;
-let accMs   = 0;
-let tick    = null;
-let activeSessionId = null;  // ID de sesión activa en la BD
+// Instancia compartida del timer
+let _timer = null;
 let sessionsBound = false;
 
-const fmt = ms => {
-  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-};
+// =========================================================
+// API DE COMPATIBILIDAD
+// =========================================================
 
-function draw() {
-  const ms = running ? accMs + (Date.now() - startMs) : accMs;
-  const el = $("tiempoTerapia");
-  if (el) el.textContent = fmt(ms);
-}
+export function getActiveSessionId() { return _timer?.sessionId ?? null; }
+export function setActiveSessionId(id) { if (_timer) _timer.sessionId = id; }
+export function isRunning() { return _timer?.isRunning ?? false; }
+export function getAccMs()  { return _timer?.elapsed ?? 0; }
 
-export function getActiveSessionId() { return activeSessionId; }
-export function setActiveSessionId(id) { activeSessionId = id; }
-
-export function isRunning() { return running; }
-export function getAccMs()  { return running ? accMs + (Date.now() - startMs) : accMs; }
-
-/** Inicializa el timer con milisegundos ya acumulados */
+/**
+ * Inicializa el timer con el estado del servidor.
+ * Combina serverMs con lo persistido en storage,
+ * tomando el mayor (servidor = fuente de verdad,
+ * storage puede tener un valor mas reciente sin sincronizar).
+ *
+ * @param {number} initialMs  ms acumulados segun el backend
+ * @param {string|null} sessionId  ID de sesion activa en backend
+ */
 export function initTimer(initialMs = 0, sessionId = null) {
-  if (running) { accMs += Date.now() - startMs; running = false; clearInterval(tick); tick = null; }
-  accMs = initialMs;
-  startMs = null;
-  activeSessionId = sessionId || null;
-  draw();
-}
+  if (_timer) _timer.destroy();
 
-/** Toggle play/pause del timer visual (no llama API) */
-export function toggleTimer() {
-  if (!state.currentUserId) return;
-  if (running) {
-    accMs += Date.now() - startMs;
-    running = false;
-    clearInterval(tick); tick = null;
-    try { localStorage.setItem(STORAGE_KEY(state.currentUserId), String(accMs)); } catch (_) {}
-    draw();
-  } else {
-    startMs = Date.now(); running = true;
-    tick = setInterval(draw, 1000);
-    draw();
+  const uid = state.currentUserId;
+
+  // Sin UID usamos un timer efimero que no toca storage real
+  _timer = new SessionTimer(uid ? String(uid) : "__ephemeral__" + Date.now());
+  _timer.init(initialMs, sessionId);
+
+  if (uid && !SessionTimer.storageAvailable) {
+    console.warn(
+      "[SessionTimer] localStorage no disponible. " +
+      "El tiempo de terapia no persistira entre recargas."
+    );
   }
 }
 
+/** Toggle play/pause — no llama API. */
+export function toggleTimer() {
+  if (!_timer || !state.currentUserId) return;
+  _timer.toggle();
+}
+
 // =========================================================
-// SESIÓN EN BACKEND
+// SESION EN BACKEND
 // =========================================================
 
-/** Inicia sesión en el backend y arranca timer */
 export async function doStartSession(pacienteId, modoProgamado = "convencional") {
-  if (activeSessionId) {
-    if (!running) toggleTimer();
-    return activeSessionId;
+  if (!_timer) return null;
+
+  if (_timer.sessionId) {
+    if (!_timer.isRunning) _timer.start();
+    return _timer.sessionId;
   }
 
   try {
-    const { ok, data } = await startSession({ paciente_id: pacienteId, modo_programado: modoProgamado, tipo_control: "tutor" });
+    const { ok, data } = await startSession({
+      paciente_id:    pacienteId,
+      modo_programado: modoProgamado,
+      tipo_control:   "tutor",
+    });
+
     if (ok && data.sesion_id) {
-      activeSessionId = data.sesion_id;
-      if (!running) toggleTimer();
+      _timer.sessionId = data.sesion_id;
+      if (!_timer.isRunning) _timer.start();
       return data.sesion_id;
     }
+
     if (data?.error === "sesion_ya_activa") {
-      activeSessionId = data.sesion_id;
-      if (!running) toggleTimer();
+      _timer.sessionId = data.sesion_id;
+      if (!_timer.isRunning) _timer.start();
       return data.sesion_id;
     }
-  } catch (_) {}
+  } catch (err) {
+    console.error("[sessions] doStartSession:", err);
+  }
   return null;
 }
 
-/** Pausa sesión en el backend */
 export async function doPauseSession() {
-  if (!activeSessionId) return;
-  try { await pauseSession(activeSessionId); } catch (_) {}
-  if (running) toggleTimer();
+  if (!_timer) return;
+  const sid = _timer.sessionId;
+  if (!sid) return;
+
+  try { await pauseSession(sid); } catch (err) {
+    console.error("[sessions] doPauseSession:", err);
+  }
+  if (_timer.isRunning) _timer.pause();
 }
 
-/** Finaliza sesión en el backend y actualiza plan */
 export async function doFinishSession(motivo = "completada") {
-  const durS = Math.floor(getAccMs() / 1000);
-  if (activeSessionId) {
+  if (!_timer) return 0;
+
+  const durS = _timer.elapsedSeconds;
+  const sid  = _timer.sessionId;
+
+  if (sid) {
     try {
-      await finishSession(activeSessionId, {
+      await finishSession(sid, {
         duracion_s:           durS,
-        tiempo_rango_s:       durS,  // se puede afinar con mediciones reales
+        tiempo_rango_s:       durS,
         tiempo_fuera_rango_s: 0,
         motivo_fin:           motivo,
       });
-    } catch (_) {}
+    } catch (err) {
+      console.error("[sessions] doFinishSession:", err);
+    }
   }
-  if (running) { accMs += Date.now() - startMs; running = false; clearInterval(tick); tick = null; }
-  activeSessionId = null;
-  try {
-    if (state.currentUserId) localStorage.setItem(STORAGE_KEY(state.currentUserId), "0");
-  } catch (_) {}
+
+  _timer.reset();
   return durS;
 }
 
-/** Guarda sesión (legacy + localStorage) sin detener el timer */
 export async function saveSession() {
-  if (!state.currentUserId) return;
-  const totalMs = getAccMs();
-  try { localStorage.setItem(STORAGE_KEY(state.currentUserId), String(totalMs)); } catch (_) {}
+  if (!_timer) return;
 
-  // Si hay sesión activa en backend, finalizarla
-  if (activeSessionId) {
+  // Persistir antes de cualquier operacion de red
+  _timer.persist();
+
+  if (_timer.sessionId) {
     await doFinishSession("salida_usuario");
     return;
   }
 
-  // Fallback legacy
+  if (!state.currentUserId) return;
   try {
     await saveSessionLegacy({
-      paciente_id: state.currentUserId,
-      duracion_s:  Math.floor(totalMs / 1000),
-      tiempo_rango_s: 0,
+      paciente_id:         state.currentUserId,
+      duracion_s:          _timer.elapsedSeconds,
+      tiempo_rango_s:      0,
       intensidad_promedio: null,
-      observaciones: null,
+      observaciones:       null,
     });
-  } catch (_) {}
-}
-
-/** Guarda en localStorage antes de cerrar la pestaña (beacon) */
-export function setupBeforeUnload() {
-  window.addEventListener("beforeunload", () => {
-    if (!state.currentUserId) return;
-    const totalMs = getAccMs();
-    try { localStorage.setItem(STORAGE_KEY(state.currentUserId), String(totalMs)); } catch (_) {}
-    try {
-      navigator.sendBeacon(
-        `${window.location.origin}/api/sesiones`,
-        new Blob([JSON.stringify({
-          paciente_id: state.currentUserId,
-          duracion_s: Math.floor(totalMs / 1000),
-          tiempo_rango_s: 0,
-          intensidad_promedio: null,
-          observaciones: "auto-save-beforeunload",
-        })], { type: "application/json" })
-      );
-    } catch (_) {}
-  });
+  } catch (err) {
+    console.error("[sessions] saveSession legacy:", err);
+  }
 }
 
 // =========================================================
-// INIT SESSIONS
+// INIT
 // =========================================================
+
 export function initSessions() {
   if (sessionsBound) return;
   sessionsBound = true;
   $("timerCard")?.addEventListener("click", toggleTimer);
-  setupBeforeUnload();
+  // beforeunload lo maneja SessionTimer internamente desde init()
 }
