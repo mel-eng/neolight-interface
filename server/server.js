@@ -549,6 +549,18 @@ app.get('/api/health', async (_req, res) => {
   catch { res.status(500).json({ ok: false, mode: 'wifi', espOnline }); }
 });
 
+/**
+ * Configuración pública del cliente.
+ * Solo expone variables que el navegador necesita y que no son sensibles.
+ * Nunca incluir DB_PASS, HOSPITAL_CODE ni secretos aquí.
+ */
+app.get('/api/client-config', (_req, res) => {
+  res.json({
+    ok: true,
+    camStreamUrl: process.env.CAM_STREAM_URL || 'http://10.26.0.74/stream',
+  });
+});
+
 const buildLatestPayload = () => ({
   ok: true, mode: 'wifi', espOnline,
   data: lastTelemetry ? {

@@ -4,7 +4,7 @@
 // conexion ESP32, alarmas, exportacion y control de modo.
 // =========================================================
 
-import { $, state, normalizeMode, formatEdad, formatDoctorDisplayName } from "./config.js";
+import { $, state, normalizeMode, formatEdad, formatDoctorDisplayName, getStreamUrl } from "./config.js";
 import { fetchControl, fetchCurrentTutorState, tutorRequestMode, fetchAlarms, fetchSessions, fetchEvents, exportExcel } from "./api.js";
 import {
   socketEmitMute,
@@ -1308,9 +1308,8 @@ function bindCameraToggle() {
   const camError  = $("ptCamError");
   if (!btn || !camImg) return;
 
-  const STREAM_URL     = "http://10.26.0.74/stream";
-  const ERROR_TIMEOUT  = 7000;   // ms sin primer frame → error
-  let   errorTimer     = null;
+  const ERROR_TIMEOUT = 7000;   // ms sin primer frame → error
+  let   errorTimer    = null;
 
   function setToggle(on) {
     btn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -1322,14 +1321,14 @@ function bindCameraToggle() {
 
   function showError() {
     clearTimeout(errorTimer); errorTimer = null;
-    camImg.src          = "";
+    camImg.src           = "";
     camImg.style.display = "none";
-    camImg.onerror      = null;
-    camImg.onload       = null;
+    camImg.onerror       = null;
+    camImg.onload        = null;
     if (camError) { camError.style.display = "flex"; camError.removeAttribute("aria-hidden"); }
   }
 
-  function turnOn() {
+  async function turnOn() {
     setToggle(true);
     hideError();
     camImg.style.display = "none";    // oculto hasta que cargue primer frame
@@ -1337,12 +1336,13 @@ function bindCameraToggle() {
 
     camImg.onerror = () => showError();
     camImg.onload  = () => {
-      // Primer frame recibido — mostramos el stream
       clearTimeout(errorTimer); errorTimer = null;
       camImg.style.display = "block";
     };
     errorTimer = setTimeout(showError, ERROR_TIMEOUT);
-    camImg.src = STREAM_URL;
+
+    // Obtener la URL desde config (cacheada tras la primera llamada)
+    camImg.src = await getStreamUrl();
   }
 
   function turnOff() {
