@@ -1003,51 +1003,127 @@ async function loadPatientHistory(pacienteId) {
   }
 }
 
+// ── SVG íconos para historial ────────────────────────────
+const HIST_ICONS = {
+  clock:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14"/></svg>`,
+  pulse:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M3 12h4l2-6 4 12 2-6h4"/></svg>`,
+  doc:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>`,
+  swap:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M17 4l3 3-3 3"/><path d="M20 7H8"/><path d="M7 20l-3-3 3-3"/><path d="M4 17h12"/></svg>`,
+  plus:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+  lock:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  lamp:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>`,
+  wifi:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg>`,
+};
+
+// Mapeo tipo de evento → { label, icon, cssClass }
+function eventTagMeta(tipo) {
+  const t = (tipo || "").toLowerCase();
+  if (t.includes("inicio_sesion") || t === "sesion" || t.includes("fin_sesion") || t.includes("pausa"))
+    return { label: "Sesión",    icon: HIST_ICONS.pulse, cls: "tag-sesion" };
+  if (t.includes("lectura") || t.includes("bilirrubina") || t.includes("medicion"))
+    return { label: "Lectura",   icon: HIST_ICONS.doc,   cls: "tag-lectura" };
+  if (t.includes("cambio") || t.includes("modo") || t.includes("plan"))
+    return { label: "Cambio",    icon: HIST_ICONS.swap,  cls: "tag-cambio" };
+  if (t.includes("ingreso") || t.includes("registro") || t.includes("aceptada") || t.includes("solicitud"))
+    return { label: "Ingreso",   icon: HIST_ICONS.plus,  cls: "tag-ingreso" };
+  if (t.includes("control") || t.includes("bloqueo") || t.includes("bloqueado"))
+    return { label: "Control",   icon: HIST_ICONS.lock,  cls: "tag-control" };
+  if (t.includes("altura") || t.includes("manual"))
+    return { label: "Posición",  icon: HIST_ICONS.lamp,  cls: "tag-cambio" };
+  if (t.includes("conexion") || t.includes("esp") || t.includes("wifi"))
+    return { label: "Sistema",   icon: HIST_ICONS.wifi,  cls: "tag-sistema" };
+  return     { label: "Evento",    icon: HIST_ICONS.clock, cls: "tag-evento" };
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value).slice(0, 16);
+  const date = d.toLocaleDateString("es", { year: "numeric", month: "2-digit", day: "2-digit" });
+  const time = d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+  return `${date} ${time}`;
+}
+
 function renderHistoryRows(sessions = [], events = []) {
   const tbody = $("patientHistoryRows");
   if (!tbody) return;
 
+  // Unificar sesiones y eventos en un array común
   const rows = [
-    ...sessions.slice(0, 5).map(s => ({
-      date: s.fecha || s.created_at,
-      type: "Sesión",
-      detail: `${s.modo_programado || "-"} · ${secondsLabel(s.duracion_s)} · ${s.status || "-"}`
+    ...sessions.map(s => ({
+      date:   s.fecha || s.created_at,
+      tipo:   s.status === "finished" ? "fin_sesion" :
+              s.status === "paused"   ? "pausa_sesion" : "inicio_sesion",
+      detail: `${escapeText(s.modo_programado || "-")} · ${secondsLabel(s.duracion_s)} · ${escapeText(s.status || "-")}`,
     })),
-    ...events.slice(0, 5).map(e => ({
-      date: e.created_at,
-      type: "Evento",
-      detail: e.descripcion || e.tipo || "-"
+    ...events.map(e => ({
+      date:   e.created_at,
+      tipo:   e.tipo || "evento",
+      detail: escapeText(e.descripcion || e.tipo || "-"),
     })),
-  ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 8);
+  ]
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .slice(0, 12);
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="3">Sin datos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--pt-color-text-muted);padding:24px">Sin historial registrado</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${formatDate(r.date)}</td>
-      <td>${escapeText(r.type)}</td>
-      <td>${escapeText(r.detail)}</td>
-    </tr>`).join("");
+  tbody.innerHTML = rows.map(r => {
+    const { label, icon, cls } = eventTagMeta(r.tipo);
+    return `<tr>
+      <td><span class="td-date">${HIST_ICONS.clock}${formatDateTime(r.date)}</span></td>
+      <td><span class="tag ${cls}">${icon}${label}</span></td>
+      <td>${r.detail}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ── SVG íconos para alarmas ──────────────────────────────
+const ALARM_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+const CLOCK_ICON_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14"/></svg>`;
+
+function alarmMeta(severidad) {
+  const s = (severidad || "").toLowerCase();
+  if (s === "critical" || s === "critica" || s === "crítica")
+    return { cls: "crit", label: "CRÍTICA",      icoColor: "#d8466e", bgColor: "#fff5f8", borderColor: "rgba(216,70,110,.26)", sevBg: "#f6bfcf", sevColor: "#a02e52" };
+  if (s === "warning"  || s === "advertencia")
+    return { cls: "warn", label: "ADVERTENCIA",  icoColor: "#c98a12", bgColor: "#fffdf4", borderColor: "rgba(217,168,46,.32)",  sevBg: "#f4d97f", sevColor: "#7a560a" };
+  if (s === "info")
+    return { cls: "info", label: "INFO",         icoColor: "#3d6e9a", bgColor: "#f4f9ff", borderColor: "rgba(91,155,213,.28)",  sevBg: "#bcd9f5", sevColor: "#2f5f87" };
+  return   { cls: "warn", label: "AVISO",        icoColor: "#c98a12", bgColor: "#fffdf4", borderColor: "rgba(217,168,46,.32)",  sevBg: "#f4d97f", sevColor: "#7a560a" };
 }
 
 function renderPatientAlarms(alarms = []) {
   const box = $("patientAlarmsList");
-  const emptyHtml = `<div class="item"><div class="left"><div class="t">Sin alarmas</div><div class="s">No hay registros recientes.</div></div><span class="badge ok">OK</span></div>`;
 
   if (!alarms.length) {
-    if (box) box.innerHTML = emptyHtml;
+    if (box) box.innerHTML = `
+      <div class="alert-row info" style="justify-content:center;padding:28px;text-align:center">
+        <div style="color:var(--pt-color-text-muted);font-weight:600">Sin alarmas registradas</div>
+      </div>`;
     updateAlertCard(0);
     return;
   }
 
-  const html = alarms.slice(0, 5).map(a => {
-    const cls = String(a.severidad || "").toLowerCase() === "critical" ? "bad" : "warn";
-    return `<div class="item">
-      <div class="left"><div class="t">${escapeText(a.tipo || "Alarma")}</div><div class="s">${formatDate(a.created_at)} · ${escapeText(a.mensaje || a.valor_medido || "")}</div></div>
-      <span class="badge ${cls}">${escapeText(a.severidad || "alarma")}</span>
+  const html = alarms.slice(0, 10).map(a => {
+    const { cls, label, icoColor, bgColor, borderColor, sevBg, sevColor } = alarmMeta(a.severidad);
+    const isSilenced = a.silenciada;
+    const msg = escapeText(a.mensaje || a.descripcion || a.tipo || "");
+    const typ = escapeText(a.tipo || "Alarma");
+    const silencedBadge = isSilenced
+      ? `<span class="ar-silenced">SILENCIADA</span>` : "";
+
+    return `
+    <div class="alert-row ${cls}">
+      <div class="ar-ico" style="color:${icoColor}">${ALARM_ICON_SVG}</div>
+      <div class="ar-body">
+        <div class="ar-title">${typ}${silencedBadge}</div>
+        <div class="ar-desc">${msg}</div>
+        <div class="ar-time">${CLOCK_ICON_SVG}${formatDateTime(a.created_at)}</div>
+      </div>
+      <span class="ar-sev" style="background:${sevBg};color:${sevColor}">${label}</span>
     </div>`;
   }).join("");
 
