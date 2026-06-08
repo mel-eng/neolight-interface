@@ -4,7 +4,7 @@
 // conexion ESP32, alarmas, exportacion y control de modo.
 // =========================================================
 
-import { $, state, STORAGE_KEY, normalizeMode, formatEdad, formatDoctorDisplayName } from "./config.js";
+import { $, state, normalizeMode, formatEdad, formatDoctorDisplayName, getStreamUrl } from "./config.js";
 import { fetchControl, fetchCurrentTutorState, tutorRequestMode, fetchAlarms, fetchSessions, fetchEvents, exportExcel } from "./api.js";
 import {
   socketEmitMute,
@@ -19,6 +19,18 @@ import {
 } from "./socket.js";
 import { saveSession, initTimer } from "./sessions.js";
 import { doLogout } from "./auth.js";
+import {
+  toast,
+  showBanner,
+  clearBanner,
+  notifyDataError,
+  notifySocketDisconnected,
+  notifySocketReconnected,
+  notifyESP32Offline,
+  notifyESP32Online,
+  notifyExportError,
+  notifyInitError,
+} from "./patient-errors.js";
 
 // =========================================================
 // ESTADO LOCAL DEL DASHBOARD
@@ -80,6 +92,10 @@ const MODE_ERROR_MESSAGES = {
 export async function initPatientDashboard(sessionSnapshot) {
   const { paciente, tutor, doctor, last_session, plan, session, control, dispositivo } = sessionSnapshot;
 
+  // Notificar si faltan datos críticos de sesión
+  if (!paciente) notifyInitError("datos del paciente");
+  else if (!tutor)   notifyInitError("datos del tutor");
+
   setDashboardState({ paciente, tutor, control });
   renderPatientHeader(paciente, doctor);
   renderClinicalData(paciente, tutor, dispositivo, control);
@@ -104,6 +120,46 @@ export async function initPatientDashboard(sessionSnapshot) {
   bindPatientEvents(paciente?.id);
   loadPatientHistory(paciente?.id);
   scheduleTutorPolling();
+
+  // Todos los datos están en el DOM — revelar el dashboard
+  markPatientReady();
+}
+
+// =========================================================
+// SKELETON — LOADING STATE
+// =========================================================
+
+/**
+ * Remueve el estado de carga del shell.
+ * Se llama al final de initPatientDashboard, una vez que
+ * todos los datos clínicos ya fueron escritos en el DOM.
+ * El pequeño requestAnimationFrame garantiza que el browser
+ * haya pintado los datos antes de que arranque el fade-out.
+ */
+function markPatientReady() {
+  const shell = document.querySelector(
+    "#view-dashboard-patient .patient-shell"
+  );
+  if (!shell) return;
+
+  // Esperar al próximo frame para asegurar que el paint ya ocurrió
+  requestAnimationFrame(() => {
+    shell.classList.remove("pt-loading");
+    shell.removeAttribute("aria-busy");
+  });
+}
+
+/**
+ * Vuelve a activar el skeleton. Útil si se necesita mostrar
+ * un estado de recarga (por ejemplo, al refrescar datos del tutor).
+ */
+export function markPatientLoading() {
+  const shell = document.querySelector(
+    "#view-dashboard-patient .patient-shell"
+  );
+  if (!shell) return;
+  shell.classList.add("pt-loading");
+  shell.setAttribute("aria-busy", "true");
 }
 
 // =========================================================
@@ -133,7 +189,13 @@ async function refreshTutorState(reason = "realtime") {
 
   try {
     const { ok, data } = await fetchCurrentTutorState(tutorId);
-    if (!ok) return;
+    if (!ok) {
+      // Solo mostrar toast en poll — no spammear en refresco por evento
+      if (reason === "poll") notifyDataError("estado clínico");
+      return;
+    }
+    // Si había un banner de error de datos, limpiarlo al recuperarse
+    clearBanner("api-data");
     setDashboardState({ paciente: data.paciente, tutor: data.tutor, control: data.control });
     renderPatientHeader(data.paciente, data.doctor);
     renderClinicalData(data.paciente, data.tutor, data.dispositivo, data.control);
@@ -144,7 +206,17 @@ async function refreshTutorState(reason = "realtime") {
       loadRecentAlarms(data.paciente.id);
       loadPatientHistory(data.paciente.id);
     }
-  } catch (_) {}
+  } catch (err) {
+    // Error de red (fetch falló completamente)
+    if (reason === "poll") {
+      showBanner(
+        "api-data",
+        "Sin conexión al servidor — los datos clínicos pueden estar desactualizados.",
+        "warn",
+        { action: "Reintentar", onAction: () => refreshTutorState("poll") }
+      );
+    }
+  }
 }
 
 function scheduleTutorPolling() {
@@ -397,14 +469,14 @@ function renderActivePlan(plan) {
 
 function renderSessionTimer(paciente, lastSession, session) {
   const serverSecs = Number(lastSession?.duracion_s || 0);
-  let localMs = 0;
+  const serverMs   = serverSecs * 1000;
 
-  try {
-    localMs = Number(localStorage.getItem(STORAGE_KEY(paciente?.id)) || "0");
-  } catch (_) {}
+  // initTimer crea la instancia de SessionTimer con el UID del paciente
+  // y la combina internamente con lo que haya en storage (sin try/catch aqui)
+  initTimer(serverMs, session?.id || null);
 
-  initTimer(Math.max(serverSecs * 1000, localMs), session?.id || null);
-  const totalLabel = secondsLabel(Math.max(serverSecs, Math.floor(localMs / 1000)));
+  // Etiqueta de resumen para los campos de acumulado
+  const totalLabel = secondsLabel(serverSecs);
   setText("patientTherapyAccumulated", totalLabel);
   setText("patientHeroTime", totalLabel);
 }
@@ -580,12 +652,21 @@ function bindSocketStatusUI() {
     setESP32State({ connected: true, label: "ESP32 online", kind: "ok" });
     setText("patientSocketStatus", "Conectado");
     setText("patientMasterStatus", "Online");
+    notifySocketReconnected();
   });
 
   socket.on("disconnect", () => {
     setESP32State({ connected: false, portOpen: false, label: "ESP32 offline", kind: "err" });
     setText("patientSocketStatus", "Desconectado");
     setText("patientMasterStatus", "Offline");
+    notifySocketDisconnected();
+    notifyESP32Offline("offline");
+  });
+
+  socket.on("connect_error", () => {
+    setESP32State({ connected: false, portOpen: false, label: "Error de conexión", kind: "err" });
+    setText("patientSocketStatus", "Error");
+    notifySocketDisconnected();
   });
 
   socket.on("lamp:port", st => {
@@ -595,6 +676,11 @@ function bindSocketStatusUI() {
       kind: st?.open ? "ok" : "warn",
     });
     setText("patientMasterStatus", st?.open ? "Online" : "Offline");
+    if (st?.open) {
+      notifyESP32Online();
+    } else {
+      notifyESP32Offline("no-port");
+    }
   });
 
   socket.on("telemetry", payload => {
@@ -604,22 +690,35 @@ function bindSocketStatusUI() {
     if (payload?.estado) updateStatusCard(payload || {});
     setESP32State({ connected: true, portOpen: true, label: "ESP32 transmitiendo", kind: "ok" });
     setText("patientMasterStatus", "Online");
+    // Revelar HUD de métricas al recibir la primera telemetría real
+    document.querySelector("#view-dashboard-patient .patient-shell")
+      ?.classList.add("pt-has-telemetry");
+    notifyESP32Online();
   });
 
   socket.on("temps", payload => {
     updateTemps(payload || {});
     updatePatientSensorCards(payload || {});
     setESP32State({ connected: true, label: "ESP32 transmitiendo", kind: "ok" });
+    document.querySelector("#view-dashboard-patient .patient-shell")
+      ?.classList.add("pt-has-telemetry");
+    notifyESP32Online();
   });
 
   socket.on("status", payload => {
     updateStatusCard(payload);
     if (payload?.esp32_connected == null) return;
+    const online = !!payload.esp32_connected;
     setESP32State({
-      connected: !!payload.esp32_connected,
-      label: payload.esp32_connected ? "ESP32 online" : "ESP32 offline",
-      kind: payload.esp32_connected ? "ok" : "err",
+      connected: online,
+      label: online ? "ESP32 online" : "ESP32 offline",
+      kind: online ? "ok" : "err",
     });
+    if (online) {
+      notifyESP32Online();
+    } else {
+      notifyESP32Offline("offline");
+    }
   });
 }
 
@@ -665,7 +764,7 @@ function renderESP32Status() {
 function setModoUI(modo) {
   setModeState(modo);
   setText("pacModoActual", modo.toUpperCase());
-  setText("patientRailMode", modo.toUpperCase());
+  // patientRailMode eliminado — el modo visible está en pacModoActual
 
   Object.entries(DOM.modeByButton).forEach(([mode, id]) => {
     const btn = $(id);
@@ -824,11 +923,12 @@ function bindPatientEvents(pacienteId) {
 
   $("exportBtn")?.addEventListener("click", async () => {
     if (!dashboardState.pacienteId) return;
-
     try {
+      toast("Generando Excel…", "info", 2000);
       await exportExcel(dashboardState.pacienteId);
+      toast("Excel descargado correctamente.", "ok");
     } catch (_) {
-      alert("Error exportando datos. Intenta de nuevo.");
+      notifyExportError("excel");
     }
   });
 
@@ -837,9 +937,11 @@ function bindPatientEvents(pacienteId) {
   $("exportBtnTop")?.addEventListener("click", async () => {
     if (!dashboardState.pacienteId) return;
     try {
+      toast("Generando Excel…", "info", 2000);
       await exportExcel(dashboardState.pacienteId);
+      toast("Excel descargado correctamente.", "ok");
     } catch (_) {
-      alert("Error exportando datos. Intenta de nuevo.");
+      notifyExportError("excel");
     }
   });
   $("patientSidebarLogout")?.addEventListener("click", async () => {
@@ -866,15 +968,21 @@ function bindPatientSections() {
 async function loadRecentAlarms(pacienteId) {
   try {
     const { ok, data } = await fetchAlarms(pacienteId);
+    if (!ok) {
+      toast("No se pudieron cargar las alarmas.", "warn");
+      return;
+    }
     renderPatientAlarms(data.alarms || []);
-    if (!ok || !data.alarms?.length) return;
+    if (!data.alarms?.length) return;
 
     const criticals = data.alarms.filter(alarm => !alarm.silenciada && alarm.severidad === "critical");
     if (!criticals.length) return;
 
     const statusDet = $("statusDetail");
     if (statusDet) statusDet.textContent += ` - ${criticals.length} alarma(s) critica(s) activa(s).`;
-  } catch (_) {}
+  } catch (_) {
+    toast("Error al conectar con el servidor de alarmas.", "warn");
+  }
 }
 
 async function loadPatientHistory(pacienteId) {
@@ -884,69 +992,142 @@ async function loadPatientHistory(pacienteId) {
       fetchSessions(pacienteId),
       fetchEvents(pacienteId),
     ]);
+    if (!sessionsRes.ok && !eventsRes.ok) {
+      toast("No se pudo cargar el historial de sesiones.", "warn");
+    }
     const sessions = sessionsRes.data?.sessions || [];
     const events = eventsRes.data?.events || [];
     renderHistoryRows(sessions, events);
-  } catch (_) {}
+  } catch (_) {
+    toast("Error al cargar el historial clínico.", "warn");
+  }
+}
+
+// ── SVG íconos para historial ────────────────────────────
+const HIST_ICONS = {
+  clock:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14"/></svg>`,
+  pulse:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M3 12h4l2-6 4 12 2-6h4"/></svg>`,
+  doc:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>`,
+  swap:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M17 4l3 3-3 3"/><path d="M20 7H8"/><path d="M7 20l-3-3 3-3"/><path d="M4 17h12"/></svg>`,
+  plus:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+  lock:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  lamp:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>`,
+  wifi:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg>`,
+};
+
+// Mapeo tipo de evento → { label, icon, cssClass }
+function eventTagMeta(tipo) {
+  const t = (tipo || "").toLowerCase();
+  if (t.includes("inicio_sesion") || t === "sesion" || t.includes("fin_sesion") || t.includes("pausa"))
+    return { label: "Sesión",    icon: HIST_ICONS.pulse, cls: "tag-sesion" };
+  if (t.includes("lectura") || t.includes("bilirrubina") || t.includes("medicion"))
+    return { label: "Lectura",   icon: HIST_ICONS.doc,   cls: "tag-lectura" };
+  if (t.includes("cambio") || t.includes("modo") || t.includes("plan"))
+    return { label: "Cambio",    icon: HIST_ICONS.swap,  cls: "tag-cambio" };
+  if (t.includes("ingreso") || t.includes("registro") || t.includes("aceptada") || t.includes("solicitud"))
+    return { label: "Ingreso",   icon: HIST_ICONS.plus,  cls: "tag-ingreso" };
+  if (t.includes("control") || t.includes("bloqueo") || t.includes("bloqueado"))
+    return { label: "Control",   icon: HIST_ICONS.lock,  cls: "tag-control" };
+  if (t.includes("altura") || t.includes("manual"))
+    return { label: "Posición",  icon: HIST_ICONS.lamp,  cls: "tag-cambio" };
+  if (t.includes("conexion") || t.includes("esp") || t.includes("wifi"))
+    return { label: "Sistema",   icon: HIST_ICONS.wifi,  cls: "tag-sistema" };
+  return     { label: "Evento",    icon: HIST_ICONS.clock, cls: "tag-evento" };
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value).slice(0, 16);
+  const date = d.toLocaleDateString("es", { year: "numeric", month: "2-digit", day: "2-digit" });
+  const time = d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+  return `${date} ${time}`;
 }
 
 function renderHistoryRows(sessions = [], events = []) {
   const tbody = $("patientHistoryRows");
   if (!tbody) return;
 
+  // Unificar sesiones y eventos en un array común
   const rows = [
-    ...sessions.slice(0, 5).map(s => ({
-      date: s.fecha || s.created_at,
-      type: "Sesión",
-      detail: `${s.modo_programado || "-"} · ${secondsLabel(s.duracion_s)} · ${s.status || "-"}`
+    ...sessions.map(s => ({
+      date:   s.fecha || s.created_at,
+      tipo:   s.status === "finished" ? "fin_sesion" :
+              s.status === "paused"   ? "pausa_sesion" : "inicio_sesion",
+      detail: `${escapeText(s.modo_programado || "-")} · ${secondsLabel(s.duracion_s)} · ${escapeText(s.status || "-")}`,
     })),
-    ...events.slice(0, 5).map(e => ({
-      date: e.created_at,
-      type: "Evento",
-      detail: e.descripcion || e.tipo || "-"
+    ...events.map(e => ({
+      date:   e.created_at,
+      tipo:   e.tipo || "evento",
+      detail: escapeText(e.descripcion || e.tipo || "-"),
     })),
-  ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 8);
+  ]
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .slice(0, 12);
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="3">Sin datos</td></tr>`;
-    const railTbody = $("patientRailHistoryRows");
-    if (railTbody) railTbody.innerHTML = `<tr><td colspan="3">Sin datos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--pt-color-text-muted);padding:24px">Sin historial registrado</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${formatDate(r.date)}</td>
-      <td>${escapeText(r.type)}</td>
-      <td>${escapeText(r.detail)}</td>
-    </tr>`).join("");
+  tbody.innerHTML = rows.map(r => {
+    const { label, icon, cls } = eventTagMeta(r.tipo);
+    return `<tr>
+      <td><span class="td-date">${HIST_ICONS.clock}${formatDateTime(r.date)}</span></td>
+      <td><span class="tag ${cls}">${icon}${label}</span></td>
+      <td>${r.detail}</td>
+    </tr>`;
+  }).join("");
+}
 
-  const railTbody = $("patientRailHistoryRows");
-  if (railTbody) railTbody.innerHTML = tbody.innerHTML;
+// ── SVG íconos para alarmas ──────────────────────────────
+const ALARM_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+const CLOCK_ICON_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14"/></svg>`;
+
+function alarmMeta(severidad) {
+  const s = (severidad || "").toLowerCase();
+  if (s === "critical" || s === "critica" || s === "crítica")
+    return { cls: "crit", label: "CRÍTICA",      icoColor: "#d8466e", bgColor: "#fff5f8", borderColor: "rgba(216,70,110,.26)", sevBg: "#f6bfcf", sevColor: "#a02e52" };
+  if (s === "warning"  || s === "advertencia")
+    return { cls: "warn", label: "ADVERTENCIA",  icoColor: "#c98a12", bgColor: "#fffdf4", borderColor: "rgba(217,168,46,.32)",  sevBg: "#f4d97f", sevColor: "#7a560a" };
+  if (s === "info")
+    return { cls: "info", label: "INFO",         icoColor: "#3d6e9a", bgColor: "#f4f9ff", borderColor: "rgba(91,155,213,.28)",  sevBg: "#bcd9f5", sevColor: "#2f5f87" };
+  return   { cls: "warn", label: "AVISO",        icoColor: "#c98a12", bgColor: "#fffdf4", borderColor: "rgba(217,168,46,.32)",  sevBg: "#f4d97f", sevColor: "#7a560a" };
 }
 
 function renderPatientAlarms(alarms = []) {
   const box = $("patientAlarmsList");
-  const railBox = $("patientRailAlarmsList");
-  const emptyHtml = `<div class="item"><div class="left"><div class="t">Sin alarmas</div><div class="s">No hay registros recientes.</div></div><span class="badge ok">OK</span></div>`;
 
   if (!alarms.length) {
-    if (box) box.innerHTML = emptyHtml;
-    if (railBox) railBox.innerHTML = emptyHtml;
+    if (box) box.innerHTML = `
+      <div class="alert-row info" style="justify-content:center;padding:28px;text-align:center">
+        <div style="color:var(--pt-color-text-muted);font-weight:600">Sin alarmas registradas</div>
+      </div>`;
     updateAlertCard(0);
     return;
   }
 
-  const html = alarms.slice(0, 5).map(a => {
-    const cls = String(a.severidad || "").toLowerCase() === "critical" ? "bad" : "warn";
-    return `<div class="item">
-      <div class="left"><div class="t">${escapeText(a.tipo || "Alarma")}</div><div class="s">${formatDate(a.created_at)} · ${escapeText(a.mensaje || a.valor_medido || "")}</div></div>
-      <span class="badge ${cls}">${escapeText(a.severidad || "alarma")}</span>
+  const html = alarms.slice(0, 10).map(a => {
+    const { cls, label, icoColor, bgColor, borderColor, sevBg, sevColor } = alarmMeta(a.severidad);
+    const isSilenced = a.silenciada;
+    const msg = escapeText(a.mensaje || a.descripcion || a.tipo || "");
+    const typ = escapeText(a.tipo || "Alarma");
+    const silencedBadge = isSilenced
+      ? `<span class="ar-silenced">SILENCIADA</span>` : "";
+
+    return `
+    <div class="alert-row ${cls}">
+      <div class="ar-ico" style="color:${icoColor}">${ALARM_ICON_SVG}</div>
+      <div class="ar-body">
+        <div class="ar-title">${typ}${silencedBadge}</div>
+        <div class="ar-desc">${msg}</div>
+        <div class="ar-time">${CLOCK_ICON_SVG}${formatDateTime(a.created_at)}</div>
+      </div>
+      <span class="ar-sev" style="background:${sevBg};color:${sevColor}">${label}</span>
     </div>`;
   }).join("");
 
   if (box) box.innerHTML = html;
-  if (railBox) railBox.innerHTML = html;
 
   const active = alarms.filter(a => !a.silenciada).length;
   updateAlertCard(active);
@@ -959,15 +1140,26 @@ function updateAlertCard(count) {
   const badge = $("ptBellBadge");
 
   if (count > 0) {
+    const label = `${count} alarma${count > 1 ? "s" : ""} activa${count > 1 ? "s" : ""}`;
     card?.classList.add("pt-has-alert");
-    if (msg) msg.textContent = `${count} alarma${count > 1 ? "s" : ""} activa${count > 1 ? "s" : ""}`;
-    if (cnt) cnt.textContent = `${count} alarma${count > 1 ? "s" : ""}`;
-    badge?.classList.add("pt-badge-visible");
+    if (msg) msg.textContent = label;
+    if (cnt) cnt.textContent = label;
+    if (badge) {
+      badge.textContent = String(count);
+      badge.setAttribute("aria-label", label);
+      badge.removeAttribute("aria-hidden");
+      badge.classList.add("pt-badge-visible");
+    }
   } else {
     card?.classList.remove("pt-has-alert");
     if (msg) msg.textContent = "Sin alarmas activas";
     if (cnt) cnt.textContent = "";
-    badge?.classList.remove("pt-badge-visible");
+    if (badge) {
+      badge.textContent = "";
+      badge.setAttribute("aria-label", "");
+      badge.setAttribute("aria-hidden", "true");
+      badge.classList.remove("pt-badge-visible");
+    }
   }
 }
 
@@ -985,7 +1177,14 @@ function labelGenero(value) {
 
 function setProgress(id, pct) {
   const el = $(id);
-  if (el) el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  if (!el) return;
+  const clamped = Math.max(0, Math.min(100, pct));
+  el.style.width = `${clamped}%`;
+  // Actualizar aria-valuenow en el contenedor progressbar padre
+  const bar = el.closest("[role='progressbar']") || el.parentElement;
+  if (bar?.getAttribute("role") === "progressbar") {
+    bar.setAttribute("aria-valuenow", String(Math.round(clamped)));
+  }
 }
 
 function setDonut(id, pct) {
@@ -1097,11 +1296,15 @@ function drawLineChart(id, seriesList, colors, minY, maxY) {
 }
 
 function downloadPatientPdfReport() {
-  renderPatientPdfReport();
-  const report = $("patientPdfReport");
-  if (report) report.setAttribute("aria-hidden", "false");
-  window.print();
-  window.setTimeout(() => report?.setAttribute("aria-hidden", "true"), 500);
+  try {
+    renderPatientPdfReport();
+    const report = $("patientPdfReport");
+    if (report) report.setAttribute("aria-hidden", "false");
+    window.print();
+    window.setTimeout(() => report?.setAttribute("aria-hidden", "true"), 500);
+  } catch (_) {
+    notifyExportError("pdf");
+  }
 }
 
 function renderPatientPdfReport() {
@@ -1181,9 +1384,8 @@ function bindCameraToggle() {
   const camError  = $("ptCamError");
   if (!btn || !camImg) return;
 
-  const STREAM_URL     = "http://10.26.0.74/stream";
-  const ERROR_TIMEOUT  = 7000;   // ms sin primer frame → error
-  let   errorTimer     = null;
+  const ERROR_TIMEOUT = 7000;   // ms sin primer frame → error
+  let   errorTimer    = null;
 
   function setToggle(on) {
     btn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -1195,14 +1397,14 @@ function bindCameraToggle() {
 
   function showError() {
     clearTimeout(errorTimer); errorTimer = null;
-    camImg.src          = "";
+    camImg.src           = "";
     camImg.style.display = "none";
-    camImg.onerror      = null;
-    camImg.onload       = null;
+    camImg.onerror       = null;
+    camImg.onload        = null;
     if (camError) { camError.style.display = "flex"; camError.removeAttribute("aria-hidden"); }
   }
 
-  function turnOn() {
+  async function turnOn() {
     setToggle(true);
     hideError();
     camImg.style.display = "none";    // oculto hasta que cargue primer frame
@@ -1210,12 +1412,13 @@ function bindCameraToggle() {
 
     camImg.onerror = () => showError();
     camImg.onload  = () => {
-      // Primer frame recibido — mostramos el stream
       clearTimeout(errorTimer); errorTimer = null;
       camImg.style.display = "block";
     };
     errorTimer = setTimeout(showError, ERROR_TIMEOUT);
-    camImg.src = STREAM_URL;
+
+    // Obtener la URL desde config (cacheada tras la primera llamada)
+    camImg.src = await getStreamUrl();
   }
 
   function turnOff() {
@@ -1255,5 +1458,15 @@ function escapeText(value) {
 
 function setText(id, value) {
   const el = $(id);
-  if (el) el.textContent = value;
+  if (!el) return;
+  el.textContent = value;
+  // Sync data-connected on the parent .pcc-row for CSS dot coloring
+  const CONNECTION_IDS = new Set(["patientMasterStatus", "patientSlaveStatus", "patientSocketStatus"]);
+  if (CONNECTION_IDS.has(id)) {
+    const row = el.closest(".pcc-row");
+    if (row) {
+      const connected = /conectad|online|en\s*línea/i.test(value);
+      row.dataset.connected = String(connected);
+    }
+  }
 }

@@ -7,6 +7,42 @@
 export let API_URL = window.location.origin || "";
 if (!API_URL || API_URL.startsWith("file:")) API_URL = "http://localhost:3000";
 
+// =========================================================
+// STREAM URL — cámara ESP32-S3
+// =========================================================
+
+/**
+ * URL del stream MJPEG de la cámara ESP32-S3.
+ *
+ * Resolución en orden de prioridad:
+ *   1. Valor devuelto por /api/client-config  (configurado en .env del servidor)
+ *   2. Fallback hardcodeado de desarrollo     (solo si el endpoint falla)
+ *
+ * Se exporta como Promise para que los consumidores esperen a que
+ * el endpoint responda antes de usarla. En la práctica se resuelve
+ * en < 10 ms ya que el servidor está en la misma red local.
+ *
+ * Uso:
+ *   import { getStreamUrl } from "./config.js";
+ *   const url = await getStreamUrl();
+ */
+const STREAM_URL_FALLBACK = "http://10.26.0.74/stream";
+
+let _streamUrlCache = null;
+
+export async function getStreamUrl() {
+  if (_streamUrlCache !== null) return _streamUrlCache;
+  try {
+    const res  = await fetch(`${API_URL}/api/client-config`);
+    const data = await res.json();
+    _streamUrlCache = data?.camStreamUrl || STREAM_URL_FALLBACK;
+  } catch {
+    console.warn("[config] No se pudo obtener client-config. Usando fallback de stream.");
+    _streamUrlCache = STREAM_URL_FALLBACK;
+  }
+  return _streamUrlCache;
+}
+
 // Storage keys
 export const SESSION_KEY        = "fototerapia_session";
 export const LOGIN_KEY          = "fototerapia_login";
