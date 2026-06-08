@@ -197,6 +197,12 @@ app.use(express.static(path.join(__dirname, 'public'), { setHeaders: (res, fileP
   if (filePath.endsWith('.html')) res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (filePath.endsWith('.js'))   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   if (filePath.endsWith('.css'))  res.setHeader('Content-Type', 'text/css; charset=utf-8');
+  // No cachear CSS/JS durante desarrollo para evitar layout roto por caché viejo
+  if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
 }}));
 app.use(cors({ origin: true }));
 app.use(express.json());
