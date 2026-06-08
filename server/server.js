@@ -23,7 +23,9 @@ import os              from 'os';
 import { fileURLToPath } from 'url';
 import { Server as SocketIOServer } from 'socket.io';
 import ExcelJS         from 'exceljs';
-import { Bonjour }     from 'bonjour-service';
+import { createRequire }  from 'module';
+const require            = createRequire(import.meta.url);
+const { Bonjour }        = require('bonjour-service');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
