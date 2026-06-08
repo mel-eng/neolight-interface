@@ -23,6 +23,7 @@ import os              from 'os';
 import { fileURLToPath } from 'url';
 import { Server as SocketIOServer } from 'socket.io';
 import ExcelJS         from 'exceljs';
+import { Bonjour }     from 'bonjour-service';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -1914,9 +1915,26 @@ initDB()
   .then(() => {
     server.listen(CONFIG.PORT, '0.0.0.0', () => {
       const ip = getLocalIp() || 'localhost';
+
+      // ── mDNS: anunciar como neolight.local ──────────────
+      try {
+        const bonjour = new Bonjour();
+        bonjour.publish({
+          name: 'NEOLIGHT',
+          type: 'http',
+          port: CONFIG.PORT,
+          host: 'neolight.local',
+        });
+        console.log(`  mDNS:    http://neolight.local:${CONFIG.PORT}`);
+      } catch (e) {
+        console.warn('  mDNS no disponible en este sistema:', e.message);
+      }
+      // ────────────────────────────────────────────────────
+
       console.log('======================================================');
       console.log(`  NEOLIGHT Server v3.2`);
       console.log(`  Local:   http://localhost:${CONFIG.PORT}`);
+      console.log(`  mDNS:    http://neolight.local:${CONFIG.PORT}`);
       console.log(`  Red:     http://${ip}:${CONFIG.PORT}`);
       console.log(`  ESP32:   POST http://${ip}:${CONFIG.PORT}/api/esp32-data`);
       console.log('======================================================');
