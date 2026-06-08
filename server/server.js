@@ -25,7 +25,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import ExcelJS         from 'exceljs';
 import { createRequire }  from 'module';
 const require            = createRequire(import.meta.url);
-const { Bonjour }        = require('bonjour-service');
+const multicastDns       = require('multicast-dns');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -1917,33 +1917,58 @@ io.on('connection', socket => {
   });
 });
 
+// ===================== REDIRECT IP → neolight.local ========================
+// Los requests del browser desde la IP se redirigen a neolight.local
+// para que siempre usen el mismo origen (localStorage compartido).
+// Las rutas /api/ y /socket.io/ quedan en IP para que el ESP32 siga funcionando.
+app.use((req, res, next) => {
+  const host    = (req.headers.host || '').split(':')[0];
+  const isIp    = /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+  const isAsset = req.path.startsWith('/api/')
+               || req.path.startsWith('/socket.io/')
+               || req.path.includes('.');   // archivos estáticos (.css, .js, .png…)
+  if (isIp && !isAsset) {
+    return res.redirect(302, `http://neolight.local:${CONFIG.PORT}${req.originalUrl}`);
+  }
+  next();
+});
+
 // ===================== INICIO ========================
 
 initDB()
   .then(() => {
-    server.listen(CONFIG.PORT, '0.0.0.0', () => {
+    // Escuchar en IPv4 e IPv6 (dual-stack)
+    server.listen(CONFIG.PORT, '::', () => {
       const ip = getLocalIp() || 'localhost';
 
-      // ── mDNS: anunciar como neolight.local ──────────────
+      // ── mDNS: responder SOLO con registro A (IPv4) ───────
+      // Esto hace que "ping neolight.local" devuelva la IP real
+      // en lugar de la dirección IPv6 link-local (fe80::...)
       try {
-        const bonjour = new Bonjour();
-        bonjour.publish({
-          name: 'NEOLIGHT',
-          type: 'http',
-          port: CONFIG.PORT,
-          host: 'neolight.local',
+        const mdns = multicastDns();
+        mdns.on('query', (query) => {
+          const answers = [];
+          for (const q of (query.questions || [])) {
+            if (q.name !== 'neolight.local') continue;
+            if (q.type === 'A' || q.type === 'ANY') {
+              answers.push({ name: 'neolight.local', type: 'A',
+                             ttl: 300, flush: true, data: ip });
+            }
+            // No respondemos AAAA → no se anuncia IPv6
+          }
+          if (answers.length) mdns.respond({ answers });
         });
-        console.log(`  mDNS:    http://neolight.local:${CONFIG.PORT}`);
+        console.log(`  mDNS:    http://neolight.local:${CONFIG.PORT}  →  ${ip}`);
       } catch (e) {
-        console.warn('  mDNS no disponible en este sistema:', e.message);
+        console.warn('  mDNS no disponible:', e.message);
       }
-      // ────────────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────
 
       console.log('======================================================');
       console.log(`  NEOLIGHT Server v3.2`);
+      console.log(`  Acceso:  http://neolight.local:${CONFIG.PORT}   ← usa esta`);
       console.log(`  Local:   http://localhost:${CONFIG.PORT}`);
-      console.log(`  mDNS:    http://neolight.local:${CONFIG.PORT}`);
-      console.log(`  Red:     http://${ip}:${CONFIG.PORT}`);
+      console.log(`  Red:     http://${ip}:${CONFIG.PORT}  (redirige a neolight.local)`);
       console.log(`  ESP32:   POST http://${ip}:${CONFIG.PORT}/api/esp32-data`);
       console.log('======================================================');
     });
