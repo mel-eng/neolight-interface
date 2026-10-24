@@ -7,7 +7,6 @@
 import { $, state } from "./config.js";
 import { initAuth, openAuthModal, doLogout, bootstrapFromStorage } from "./auth.js";
 import { initSessions } from "./sessions.js";
-import { loadPartial, loadAllPartials } from "./partials.js";
 
 // =========================================================
 // NAVEGACIÓN
@@ -38,7 +37,13 @@ export function setNavMode(mode) {
 function showDash(which) {
   const lb = $("logoutBtn"); if (lb) lb.style.display = "inline-flex";
   setNavMode("private");
-  navigate(which === "patient" ? "dashboard-patient" : "dashboard-doctor");
+  document.body.classList.toggle("superuser-mode", which === "superuser");
+  const target = which === "patient"
+    ? "dashboard-patient"
+    : which === "superuser"
+      ? "dashboard-superuser"
+      : "dashboard-doctor";
+  navigate(target);
 }
 
 export async function enterFromSession(data) {
@@ -48,14 +53,32 @@ export async function enterFromSession(data) {
     return;
   }
   state.currentRole = role;
+  import("./antifaz.js").then(({ initAntifaz }) => initAntifaz(role)).catch(() => {});
+  import("./plan-fin.js").then(({ initPlanFin }) => initPlanFin(role)).catch(() => {});
+  import("./cuna.js").then(({ initCuna }) => initCuna(role, { patientId: () => data?.paciente?.id ?? null })).catch(() => {});
+
+
+  if (role === "superuser") {
+    if (!data?.superuser) {
+      doLogout(false);
+      return;
+    }
+    state.currentUserId = data.superuser.id;
+    state.currentSuperuserId = data.superuser.id;
+    showDash("superuser");
+    const { initSocket, socketIdentifySuperuser } = await import("./socket.js");
+    initSocket();
+    socketIdentifySuperuser(data.superuser.id);
+    const { initSuperuserDashboard } = await import("./superuser-dashboard.js");
+    await initSuperuserDashboard(data);
+    return;
+  }
 
   if (role === "doctor") {
     if (!data?.doctor) {
       doLogout(false);
       return;
     }
-    // Garantizar que el partial esté en el DOM antes de navegar
-    await loadPartial("doctor-dashboard.html");
     showDash("doctor");
     const { initSocket, socketIdentifyDoctor } = await import("./socket.js");
     initSocket();
@@ -69,11 +92,9 @@ export async function enterFromSession(data) {
     doLogout(false);
     return;
   }
-
-  // Garantizar que el partial esté en el DOM antes de navegar
-  await loadPartial("patient-dashboard.html");
   showDash("patient");
 
+  // Cargar e inicializar socket antes del dashboard
   const { initSocket, socketIdentifyTutor } = await import("./socket.js");
   initSocket();
   socketIdentifyTutor(data.tutor.id, data.paciente.id);
@@ -93,11 +114,13 @@ function bindNavButtons() {
   // Nav links
   $("navHome")?.addEventListener("click",     () => navigate("home"));
   $("navLogin")?.addEventListener("click",    () => openAuthModal());
+  $("topLoginBtn")?.addEventListener("click", () => openAuthModal());
   $("navHistoria")?.addEventListener("click", () => navigate("historia"));
   $("navContacto")?.addEventListener("click", () => navigate("contacto"));
 
   // Hero CTA
   $("heroLoginBtn")?.addEventListener("click",    () => openAuthModal());
+  $("heroRegisterBtn")?.addEventListener("click", () => openAuthModal("registerChooserView"));
   $("historiaLoginBtn")?.addEventListener("click",() => openAuthModal("loginView"));
 
   // Footer links
@@ -112,22 +135,26 @@ function bindNavButtons() {
 // =========================================================
 async function init() {
   bindNavButtons();
-
-  // Cargar auth modal primero — initAuth lo necesita en el DOM
-  await loadPartial("auth-modal.html");
   initAuth();
   initSessions();
+
+  // Inicializar calculadora de tasa por defecto
+  const planRate = $("planRate"), planIntensity = $("planIntensity");
+  if (planRate && planIntensity) planRate.value = "0.15";
 
   // Navegar a home
   navigate("home");
 
-  // Precargar dashboards en segundo plano mientras el usuario
-  // está en la landing, para que al hacer login estén listos
-  if (typeof requestIdleCallback !== "undefined") {
-    requestIdleCallback(() => loadAllPartials());
-  } else {
-    setTimeout(() => loadAllPartials(), 1000);
-  }
+  // El QR de la lámpara abre directo el teclado del acceso técnico.
+  const openTechIfAsked = async () => {
+    if (location.hash.toLowerCase() !== "#tecnico") return false;
+    const { openTechAccess } = await import("./auth.js");
+    if (state.currentRole) doLogout(false);
+    openTechAccess();
+    return true;
+  };
+  window.addEventListener("hashchange", openTechIfAsked);
+  if (await openTechIfAsked()) return;
 
   // Restaurar sesión desde localStorage
   await bootstrapFromStorage();

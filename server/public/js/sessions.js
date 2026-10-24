@@ -1,160 +1,80 @@
 // =========================================================
 // public/js/sessions.js
-// Orquesta el timer de sesion (SessionTimer) con las
-// llamadas de API de inicio, pausa y fin de sesion.
+// Cronómetro de la sesión en curso (panel del tutor).
+//
+// La sesión la abre y la cierra el servidor según lo que hace la lámpara:
+// empieza cuando la lámpara entra en terapia y termina cuando se detiene
+// o se desconecta. Aquí solo se muestra el tiempo transcurrido.
 // =========================================================
 
 import { $, state } from "./config.js";
-import { startSession, pauseSession, finishSession, saveSessionLegacy } from "./api.js";
-import { SessionTimer } from "./SessionTimer.js";
 
-// Instancia compartida del timer
-let _timer = null;
+let startedAtMs = null;
+let tick = null;
+let activeSessionId = null;
 let sessionsBound = false;
 
-// =========================================================
-// API DE COMPATIBILIDAD
-// =========================================================
+const format = ms => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+};
 
-export function getActiveSessionId() { return _timer?.sessionId ?? null; }
-export function setActiveSessionId(id) { if (_timer) _timer.sessionId = id; }
-export function isRunning() { return _timer?.isRunning ?? false; }
-export function getAccMs()  { return _timer?.elapsed ?? 0; }
-
-/**
- * Inicializa el timer con el estado del servidor.
- * Combina serverMs con lo persistido en storage,
- * tomando el mayor (servidor = fuente de verdad,
- * storage puede tener un valor mas reciente sin sincronizar).
- *
- * @param {number} initialMs  ms acumulados segun el backend
- * @param {string|null} sessionId  ID de sesion activa en backend
- */
-export function initTimer(initialMs = 0, sessionId = null) {
-  if (_timer) _timer.destroy();
-
-  const uid = state.currentUserId;
-
-  // Sin UID usamos un timer efimero que no toca storage real
-  _timer = new SessionTimer(uid ? String(uid) : "__ephemeral__" + Date.now());
-  _timer.init(initialMs, sessionId);
-
-  if (uid && !SessionTimer.storageAvailable) {
-    console.warn(
-      "[SessionTimer] localStorage no disponible. " +
-      "El tiempo de terapia no persistira entre recargas."
-    );
-  }
+function draw() {
+  const el = $("tiempoTerapia");
+  if (el) el.textContent = format(startedAtMs ? Date.now() - startedAtMs : 0);
+  const hero = $("patientHeroTime");
+  if (hero && startedAtMs) hero.textContent = el?.textContent || "";
 }
 
-/** Toggle play/pause — no llama API. */
-export function toggleTimer() {
-  if (!_timer || !state.currentUserId) return;
-  _timer.toggle();
+function setHint(text) {
+  const hint = $("timerCard")?.querySelector("small");
+  if (hint) hint.textContent = text;
 }
 
-// =========================================================
-// SESION EN BACKEND
-// =========================================================
-
-export async function doStartSession(pacienteId, modoProgamado = "convencional") {
-  if (!_timer) return null;
-
-  if (_timer.sessionId) {
-    if (!_timer.isRunning) _timer.start();
-    return _timer.sessionId;
-  }
-
-  try {
-    const { ok, data } = await startSession({
-      paciente_id:    pacienteId,
-      modo_programado: modoProgamado,
-      tipo_control:   "tutor",
-    });
-
-    if (ok && data.sesion_id) {
-      _timer.sessionId = data.sesion_id;
-      if (!_timer.isRunning) _timer.start();
-      return data.sesion_id;
-    }
-
-    if (data?.error === "sesion_ya_activa") {
-      _timer.sessionId = data.sesion_id;
-      if (!_timer.isRunning) _timer.start();
-      return data.sesion_id;
-    }
-  } catch (err) {
-    console.error("[sessions] doStartSession:", err);
-  }
-  return null;
+function start(startedAt, sessionId) {
+  const parsed = startedAt ? new Date(startedAt).getTime() : Date.now();
+  startedAtMs = Number.isFinite(parsed) ? Math.min(parsed, Date.now()) : Date.now();
+  activeSessionId = sessionId || null;
+  clearInterval(tick);
+  tick = setInterval(draw, 1000);
+  draw();
+  setHint("Sesión en curso");
 }
 
-export async function doPauseSession() {
-  if (!_timer) return;
-  const sid = _timer.sessionId;
-  if (!sid) return;
-
-  try { await pauseSession(sid); } catch (err) {
-    console.error("[sessions] doPauseSession:", err);
-  }
-  if (_timer.isRunning) _timer.pause();
+function stop() {
+  clearInterval(tick);
+  tick = null;
+  startedAtMs = null;
+  activeSessionId = null;
+  draw();
+  setHint("Empieza sola cuando la lámpara inicia la terapia");
 }
 
-export async function doFinishSession(motivo = "completada") {
-  if (!_timer) return 0;
+export function getActiveSessionId() { return activeSessionId; }
+export function isRunning() { return !!startedAtMs; }
 
-  const durS = _timer.elapsedSeconds;
-  const sid  = _timer.sessionId;
-
-  if (sid) {
-    try {
-      await finishSession(sid, {
-        duracion_s:           durS,
-        tiempo_rango_s:       durS,
-        tiempo_fuera_rango_s: 0,
-        motivo_fin:           motivo,
-      });
-    } catch (err) {
-      console.error("[sessions] doFinishSession:", err);
-    }
-  }
-
-  _timer.reset();
-  return durS;
+/** Sincroniza el cronómetro con la sesión que informa el servidor (o la detiene si no hay). */
+export function initTimer(session = null) {
+  if (session && ["active", "paused"].includes(session.status)) start(session.started_at, session.id);
+  else stop();
 }
 
-export async function saveSession() {
-  if (!_timer) return;
-
-  // Persistir antes de cualquier operacion de red
-  _timer.persist();
-
-  if (_timer.sessionId) {
-    await doFinishSession("salida_usuario");
-    return;
-  }
-
-  if (!state.currentUserId) return;
-  try {
-    await saveSessionLegacy({
-      paciente_id:         state.currentUserId,
-      duracion_s:          _timer.elapsedSeconds,
-      tiempo_rango_s:      0,
-      intensidad_promedio: null,
-      observaciones:       null,
-    });
-  } catch (err) {
-    console.error("[sessions] saveSession legacy:", err);
-  }
-}
-
-// =========================================================
-// INIT
-// =========================================================
+/** Se conserva por compatibilidad: salir del panel ya no cierra la sesión de la lámpara. */
+export async function saveSession() {}
 
 export function initSessions() {
   if (sessionsBound) return;
   sessionsBound = true;
-  $("timerCard")?.addEventListener("click", toggleTimer);
-  // beforeunload lo maneja SessionTimer internamente desde init()
+
+  const isMine = payload => !payload?.paciente_id || String(payload.paciente_id) === String(state.currentUserId);
+
+  window.addEventListener("neolight:session-started", event => {
+    const payload = event.detail || {};
+    if (state.currentRole === "tutor" && isMine(payload)) start(null, payload.sesion_id);
+  });
+  window.addEventListener("neolight:session-finished", event => {
+    if (state.currentRole === "tutor" && isMine(event.detail)) stop();
+  });
+  stop();
 }

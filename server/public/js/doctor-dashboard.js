@@ -1,11 +1,18 @@
-﻿import { $, state, escapeHtml, escapeAttr, normalizeMode, formatDoctorDisplayName } from "./config.js";
+import { $, state, escapeHtml, escapeAttr, normalizeMode, formatDoctorDisplayName, humanLabel } from "./config.js";
 import {
   fetchRequests, decideRequest, fetchModeRequests, decideModeRequest,
   fetchPatients, fetchAlertsToday, searchPatients, fetchPatientDetail,
   updatePatient, updatePatientClinical, createPlan, updatePlan, cancelPlan,
-  doctorSetMode, updateControl, fetchSessions, fetchAlarms, fetchEvents, exportExcel,
+  doctorSetMode, updateControl, fetchSessions, fetchAlarms, fetchEvents, exportExcel, fetchPlanCambios,
   dischargePatient, archivePatient,
 } from "./api.js";
+import { playNotificationSound, showRealtimeToast } from "./socket.js";
+import { openReport } from "./api.js";
+import { paintPatientPhoto, savePhotoFromCamera, pickPhotoFile } from "./patient-photo.js";
+import { renderDoctorCharts, renderDoctorAlerts } from "./doctor-analytics.js";
+import { renderDoctorPdfData, bindDoctorReportButton } from "./doctor-report.js";
+import { bindDoctorSections, bindPlanCalculator } from "./doctor-navigation.js";
+import { fetchMySignature, openSignatureDialog, signatureBlockHtml } from "./signature.js";
 
 let doctorEventsBound = false;
 let searchTimer = null;
@@ -27,8 +34,10 @@ export function initDoctorDashboard(sessionSnapshot) {
   const hello = $("dashHelloDoctor");
   if (hello) hello.textContent = `Hola, ${formatDoctorDisplayName(doctor, "Dr(a). -")}`;
   renderDoctorProfile(doctor);
+  loadDoctorSignature();
 
   loadDoctorDashboard();
+  bindDoctorRealtimeEvents();
 
   if (!doctorEventsBound) {
     doctorEventsBound = true;
@@ -39,8 +48,80 @@ export function initDoctorDashboard(sessionSnapshot) {
 
     bindPlanCalculator();
     bindDoctorSections();
-    bindDoctorReportButton();
+    $("doctorSignatureEdit")?.addEventListener("click", () => openSignatureDialog({
+      onSaved: firma => { renderDoctorSignature(firma); showDoctorFeedback("Firma guardada.", "ok"); },
+    }));
+    bindDoctorReportButton(() => ({
+      doctor: currentDoctor,
+      patients: currentDoctorReport.patients,
+      requests: [...currentDoctorReport.requests, ...currentDoctorReport.modeRequests],
+      alerts: currentDoctorReport.alerts,
+    }));
   }
+}
+
+
+let doctorRealtimeBound = false;
+let doctorRealtimeRefreshTimer = null;
+
+function scheduleDoctorRealtimeRefresh(reason = "realtime") {
+  clearTimeout(doctorRealtimeRefreshTimer);
+  doctorRealtimeRefreshTimer = window.setTimeout(() => {
+    loadDoctorDashboard();
+  }, reason === "resolved" ? 120 : 250);
+}
+
+function bindDoctorRealtimeEvents() {
+  if (doctorRealtimeBound) return;
+  doctorRealtimeBound = true;
+
+  window.addEventListener("neolight:doctor-request-new", event => {
+    const payload = event.detail || {};
+    if (payload.doctor_id && state.doctorId && String(payload.doctor_id) !== String(state.doctorId)) return;
+    playNotificationSound();
+    showRealtimeToast("Nueva solicitud de ingreso", "info");
+    showDoctorFeedback("Nueva solicitud recibida en tiempo real.", "ok");
+    scheduleDoctorRealtimeRefresh("new");
+  });
+
+  window.addEventListener("neolight:mode-request-new", event => {
+    const payload = event.detail || {};
+    if (payload.doctor_id && state.doctorId && String(payload.doctor_id) !== String(state.doctorId)) return;
+    playNotificationSound();
+    const label = payload.request_type === "manual_control" ? "control manual" : `modo ${payload.mode || ""}`.trim();
+    showRealtimeToast(`Nueva solicitud de ${label}`, "info");
+    showDoctorFeedback(`Nueva solicitud de ${label}.`, "ok");
+    scheduleDoctorRealtimeRefresh("new");
+  });
+
+  window.addEventListener("neolight:mode-request-resolved", () => scheduleDoctorRealtimeRefresh("resolved"));
+  window.addEventListener("neolight:doctor-request-resolved", () => scheduleDoctorRealtimeRefresh("resolved"));
+  window.addEventListener("neolight:session-started", () => scheduleDoctorRealtimeRefresh("session"));
+  window.addEventListener("neolight:session-finished", () => scheduleDoctorRealtimeRefresh("session"));
+  window.addEventListener("neolight:alarm-new", () => scheduleDoctorRealtimeRefresh("alarm"));
+  window.addEventListener("neolight:plan-completado", event => {
+    const p = event.detail || {};
+    if (!p.forDoctor) return;
+    showRealtimeToast(`⭐ Terapia completada: ${p.paciente || "paciente"}`, "ok");
+    showDoctorFeedback(`${p.paciente || "Un paciente"} completó su plan. Decide si das el alta o indicas un nuevo plan.`, "ok");
+    scheduleDoctorRealtimeRefresh("session");
+  });
+
+  window.addEventListener("neolight:telemetry", event => {
+    const t = event.detail || {};
+    updateLampState({
+      online: t.esp32_connected !== false,
+      modo: t.modo_actual || lampState.modo,
+      cm: t.cm ?? t.distance_cm ?? null,
+      led: t.pwm ?? t.pct ?? null,
+      tamb: t.temp_ambiente ?? null,
+      pacienteId: t.paciente_id ?? null,
+    });
+  });
+  window.addEventListener("neolight:esp32-status", event => {
+    const st = event.detail || {};
+    updateLampState({ online: !!(st.open ?? st.connected) });
+  });
 }
 
 async function loadDoctorDashboard() {
@@ -53,10 +134,15 @@ async function loadDoctorDashboard() {
     const modeRequests = resMode.data?.requests || [];
     const patients = resPat.data?.patients || [];
     const alerts = Number(resAlert.data?.count || 0);
+    const alertSummary = {
+      critical: Number(resAlert.data?.critical || 0),
+      warning: Number(resAlert.data?.warning || 0),
+      silenced: Number(resAlert.data?.silenced || 0),
+    };
     const activeSessions = patients.filter(p => Number(p.sesiones_activas || 0) > 0).length;
     const clinicalActivity = await loadDoctorClinicalActivity(patients);
     const allRequests = [...requests, ...modeRequests];
-    const alertData = { today: alerts, ...clinicalActivity };
+    const alertData = { today: alerts, summary: alertSummary, ...clinicalActivity };
 
     currentDoctorReport = { patients, requests, modeRequests, alerts: alertData };
 
@@ -71,11 +157,11 @@ async function loadDoctorDashboard() {
     renderDoctorPlansSummary(patients);
     renderDoctorAlerts(alertData.recent || []);
     renderDoctorCharts(patients, allRequests, alertData);
-    renderDoctorPdfData(patients, allRequests, alertData);
+    renderDoctorPdfData({ doctor: currentDoctor, patients, requests: allRequests, alerts: alertData });
     renderDoctorRightRail(patients, alertData);
     renderDoctorHeroState(patients, alertData);
   } catch (_) {
-    ["kpiPatients","kpiRequests","kpiAlerts","kpiActiveSessions"].forEach(id => setText(id, "-”"));
+    ["kpiPatients","kpiRequests","kpiAlerts","kpiActiveSessions"].forEach(id => setText(id, "—"));
     showDoctorFeedback("No se pudo cargar el panel del doctor.", "danger");
   }
 }
@@ -123,7 +209,7 @@ function renderRequests(list, modeRequests = []) {
     const el = document.createElement("div");
     el.className = "dp-req-item";
     el.innerHTML = `
-      <div class="dp-req-badge ingreso" title="Ingreso">ðŸ‘¶</div>
+      <div class="dp-req-badge ingreso" title="Ingreso">BB</div>
       <div class="dp-req-body">
         <div class="dp-req-name">${escapeHtml(name)}</div>
         <div class="dp-req-sub">Ingreso · ${req.dias_nacido ?? "—"} días · Tutor: ${escapeHtml(tutor)}</div>
@@ -181,7 +267,9 @@ async function handleDecision(id, accept) {
 async function handleModeDecision(id, accept) {
   try {
     const { ok, data } = await decideModeRequest(id, accept);
-    if (!ok) showDoctorFeedback(data?.message || data?.error || "No se pudo resolver la solicitud de modo.", "danger");
+    if (!ok) {
+      showDoctorFeedback(`${data?.message || "No se pudo resolver la solicitud."} La solicitud sigue pendiente.`, "danger");
+    }
   } catch (_) {
     showDoctorFeedback("No se pudo conectar con el servidor.", "danger");
   }
@@ -202,6 +290,8 @@ function renderPatients(list) {
     const badge = st.includes("riesgo") || st.includes("peligro") ? "bad" : st.includes("observacion") || st.includes("advertencia") ? "warn" : "ok";
     const tutor = `${p.tutor_nombre || ""} ${p.tutor_apellidos || ""}`.trim() || "—";
     const hasSession = Number(p.sesiones_activas || 0) > 0;
+    // Plan cumplido y sin decisión todavía (ni alta ni plan nuevo).
+    const planDone = !p.plan_id && p.ultimo_plan_estado === "completado" && st !== "alta";
     const pid = escapeAttr(p.id);
     const el = document.createElement("div");
     el.className = "dp-pat-card";
@@ -213,7 +303,8 @@ function renderPatients(list) {
       </div>
       <div class="dp-pat-right">
         ${hasSession ? `<span class="dp-pat-badge session">Activa</span>` : ""}
-        <span class="dp-pat-badge ${badge}">${escapeHtml(st)}</span>
+        ${planDone ? `<span class="dp-pat-badge fin" title="Decide: alta o nuevo plan">⭐ Terapia completa</span>` : ""}
+        <span class="dp-pat-badge ${badge}">${escapeHtml(humanLabel(st))}</span>
         <div class="dp-pat-actions">
           <button class="dp-ficha-btn dp-btn-ficha" data-action="ficha"    data-patient-id="${pid}">Ficha</button>
           <button class="dp-ficha-btn dp-btn-edit"  data-action="editar"   data-patient-id="${pid}">Editar</button>
@@ -237,49 +328,86 @@ function renderPatients(list) {
   });
 }
 
+// La firma se guarda junto al doctor para ponerla al pie de los reportes.
+async function loadDoctorSignature() {
+  renderDoctorSignature(await fetchMySignature());
+}
+
+function renderDoctorSignature(firma) {
+  if (currentDoctor) currentDoctor.firma = firma || null;
+  const img = $("doctorSignatureImg"), empty = $("doctorSignatureEmpty"), button = $("doctorSignatureEdit");
+  if (img) { img.hidden = !firma; if (firma) img.src = firma; }
+  if (empty) empty.hidden = !!firma;
+  if (button) button.textContent = firma ? "Cambiar firma" : "Registrar firma";
+}
+
 function renderDoctorProfile(doctor = null) {
   const fullName = formatDoctorDisplayName(doctor, "Dr(a)");
   const initials = fullName.split(/\s+/).slice(0, 2).map(part => part[0] || "").join("").toUpperCase() || "DR";
   setText("doctorProfileAvatar", initials);
   setText("doctorProfileName", fullName);
   setText("doctorProfileSpecialty", doctor?.especialidad || "Especialidad no registrada");
-  setText("doctorProfileLicense", `Matrí­cula: ${doctor?.matricula || doctor?.matricula_profesional || " "}`);
+  setText("doctorProfileLicense", `Matrícula: ${doctor?.matricula || doctor?.matricula_profesional || " "}`);
   setText("doctorProfileCenter", doctor?.centro || doctor?.hospital || "Centro médico neonatal");
 }
 
-function renderDoctorHeroState(patients = [], alerts = {}) {
-  const activePatient = patients.find(p => Number(p.sesiones_activas || 0) > 0) || patients[0] || null;
-  const activeName = activePatient ? `${activePatient.nombre || ""} ${activePatient.apellidos || ""}`.trim() : "Sin selecciÃ³n";
-  setText("doctorSelectedPatient", activeName || "Sin selecciÃ³n");
-  setText("doctorCurrentMode", (alerts.sessions || []).find(s => s.modo_final || s.modo_programado)?.modo_final || (alerts.sessions || []).find(s => s.modo_programado)?.modo_programado || "Sin datos");
+function renderDoctorHeroState(patients = []) {
+  // Paciente que está usando la lámpara: el que tiene sesión abierta o el que informa la telemetría.
+  const inLamp = patients.find(p => Number(p.sesiones_activas || 0) > 0)
+    || patients.find(p => lampState.online && String(p.id) === String(lampState.pacienteId)) || null;
+  setText("doctorSelectedPatient", inLamp ? `${inLamp.nombre || ""} ${inLamp.apellidos || ""}`.trim() : "Ninguno");
+  if (!lampState.online) setText("doctorCurrentMode", "—");
 }
 
 function renderDoctorRightRail(patients = [], alerts = {}) {
-  renderDoctorSystemStatus(alerts);
+  renderDoctorSystemStatus();
   renderDoctorRecentActivity(alerts);
   renderDoctorMiniSummary(patients, alerts);
 }
 
-function renderDoctorSystemStatus(alerts = {}) {
+// Estado real de la lámpara: se alimenta de la telemetría en vivo, no de textos fijos.
+const lampState = { online: false, modo: null, cm: null, led: null, tamb: null, pacienteId: null };
+
+function updateLampState(patch = {}) {
+  Object.assign(lampState, patch);
+  if (!lampState.online) Object.assign(lampState, { cm: null, led: null, tamb: null });
+  renderDoctorSystemStatus();
+}
+
+function renderDoctorSystemStatus() {
+  const reading = (value, unit) => {
+    const n = Number(value);
+    return value != null && Number.isFinite(n) ? `${Math.round(n * 10) / 10} ${unit}` : "—";
+  };
+  const modo = lampState.online && lampState.modo
+    ? lampState.modo.charAt(0).toUpperCase() + lampState.modo.slice(1)
+    : "—";
+
+  const chip = $("doctorLampStatus");
+  if (chip) {
+    chip.textContent = lampState.online ? "Lámpara conectada" : "Lámpara sin conexión";
+    chip.classList.toggle("is-on", lampState.online);
+    chip.classList.toggle("is-off", !lampState.online);
+  }
+  setText("doctorCurrentMode", modo);
+
   const box = $("doctorSystemStatus");
   if (!box) return;
-  const hasActivity = (alerts.sessions || []).length || (alerts.events || []).length || (alerts.recent || []).length;
   box.innerHTML = [
-    ["MySQL", "Activo"],
-    ["Socket.IO", "Conectado"],
-    ["ESP32 maestro", hasActivity ? "Sin datos" : "No configurado"],
-    ["ESP32 esclavo", "No configurado"],
-    ["LEDs", "Sin datos"],
-    ["Actuadores", "Sin datos"],
-  ].map(([label, value]) => `<span><b>${escapeHtml(label)}</b><em>${escapeHtml(value)}</em></span>`).join("");
+    ["Lámpara", lampState.online ? "Conectada" : "Sin conexión", lampState.online ? "is-ok" : "is-bad"],
+    ["Modo", modo, ""],
+    ["Distancia", reading(lampState.cm, "cm"), ""],
+    ["Intensidad LED", reading(lampState.led, "%"), ""],
+    ["Temp. ambiente", reading(lampState.tamb, "°C"), ""],
+  ].map(([label, value, cls]) => `<span><b>${escapeHtml(label)}</b><em class="${cls}">${escapeHtml(value)}</em></span>`).join("");
 }
 
 function renderDoctorRecentActivity(alerts = {}) {
   const box = $("doctorRecentActivity");
   if (!box) return;
   const rows = [
-    ...(alerts.recent || []).slice(0, 2).map(a => ({ type: "Alarma", text: `${a.tipo || "Alerta"} · ${a.patientCode || " "}` })),
-    ...(alerts.sessions || []).slice(0, 2).map(s => ({ type: "SesiÃ³n", text: `${s.modo_final || s.modo_programado || "Terapia"} · ${s.patientCode || " - "}` })),
+    ...(alerts.recent || []).slice(0, 2).map(a => ({ type: "Alarma", text: `${humanLabel(a.tipo, "Alerta")} · ${a.patientCode || " "}` })),
+    ...(alerts.sessions || []).slice(0, 2).map(s => ({ type: "Sesión", text: `${s.modo_final || s.modo_programado || "Terapia"} · ${s.patientCode || " - "}` })),
     ...(alerts.events || []).slice(0, 2).map(e => ({ type: "Evento", text: `${e.tipo || "Evento"} · ${e.patientCode || " "}` })),
   ].slice(0, 5);
   if (!rows.length) {
@@ -298,7 +426,7 @@ function renderDoctorMiniSummary(patients = [], alerts = {}) {
   box.innerHTML = `
     <span><b>${risk}</b> Riesgo</span>
     <span><b>${activePlans}</b> Planes activos</span>
-    <span><b>${critical}</b> CrÃ­ticas</span>`;
+    <span><b>${critical}</b> Críticas</span>`;
 }
 
 function renderDoctorMiniPatients(list = []) {
@@ -313,7 +441,7 @@ function renderDoctorMiniPatients(list = []) {
     const state = p.estado_clinico || "ok";
     return `<div class="doctor-mini-row">
       <div><strong>${escapeHtml(name)}</strong><span>${escapeHtml(p.codigo || "-")} · ${p.dias_nacido ?? "—"}d</span></div>
-      <em>${escapeHtml(state)}</em>
+      <em>${!p.plan_id && p.ultimo_plan_estado === "completado" && state !== "alta" ? "⭐ Terapia completa · " : ""}${escapeHtml(humanLabel(state))}</em>
     </div>`;
   }).join("");
 }
@@ -331,122 +459,6 @@ function renderDoctorPlansSummary(list = []) {
     return `<div class="doctor-mini-row">
       <div><strong>${escapeHtml(name)}</strong><span>${escapeHtml(p.codigo || "-")} · terapia en curso</span></div>
       <em>${Number(p.sesiones_activas || 0)} activa(s)</em>
-    </div>`;
-  }).join("");
-}
-
-export function renderDoctorCharts(patients = [], requests = [], alerts = {}) {
-  renderPatientStateChart(patients);
-  renderSessionModeChart(alerts.sessions || []);
-  renderAlertChart(alerts.recent || alerts.alarms || []);
-}
-
-function renderPatientStateChart(patients = []) {
-  const box = $("chartPatientStates");
-  if (!box) return;
-
-  const counts = { ok: 0, observacion: 0, riesgo: 0, alta: 0 };
-  patients.forEach(p => {
-    const key = normalizeClinicalState(p.estado_clinico);
-    counts[key] = (counts[key] || 0) + 1;
-  });
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  if (!total) return renderChartEmpty(box);
-
-  const rows = [
-    ["OK", counts.ok, "#79b88f"],
-    ["ObservaciÃ³n", counts.observacion, "#e6c86e"],
-    ["Riesgo", counts.riesgo, "#e1849c"],
-    ["Alta", counts.alta, "#8db9e8"],
-  ];
-  let offset = 25;
-  const circles = rows.map(([, value, color]) => {
-    const dash = (value / total) * 100;
-    const segment = `<circle class="doc-donut-seg" r="15.9" cx="18" cy="18" style="stroke:${color};stroke-dasharray:${dash} ${100 - dash};stroke-dashoffset:${offset};"></circle>`;
-    offset -= dash;
-    return segment;
-  }).join("");
-
-  box.innerHTML = `
-    <div class="doc-donut-wrap">
-      <svg class="doc-donut" viewBox="0 0 36 36" aria-label="DistribuciÃ³n de pacientes por estado clÃ­nico">
-        <circle class="doc-donut-bg" r="15.9" cx="18" cy="18"></circle>
-        ${circles}
-        <text x="18" y="19.5" text-anchor="middle">${total}</text>
-      </svg>
-      <div class="doc-chart-legend">
-        ${rows.map(([label, value, color]) => `<span><i style="background:${color}"></i>${escapeHtml(label)} <b>${value}</b></span>`).join("")}
-      </div>
-    </div>`;
-}
-
-function renderSessionModeChart(sessions = []) {
-  const box = $("chartSessionModes");
-  if (!box) return;
-
-  const counts = { reposo: 0, convencional: 0, intensivo: 0, automatico: 0 };
-  sessions.forEach(s => {
-    const mode = normalizeMode(s.modo_final || s.modo_programado || s.modo) || "reposo";
-    counts[mode] = (counts[mode] || 0) + 1;
-  });
-  const max = Math.max(...Object.values(counts));
-  if (!max) return renderChartEmpty(box);
-
-  const rows = [
-    ["Reposo", counts.reposo, "#b9c6d4"],
-    ["Conv.", counts.convencional, "#99b8dd"],
-    ["Intens.", counts.intensivo, "#b09af8"],
-    ["Auto", counts.automatico, "#8dd4bd"],
-  ];
-  box.innerHTML = `<div class="doc-bars">${rows.map(([label, value, color]) => `
-    <div class="doc-bar-item">
-      <div class="doc-bar-track"><span style="height:${Math.max(8, (value / max) * 100)}%;background:${color}"></span></div>
-      <strong>${value}</strong>
-      <small>${escapeHtml(label)}</small>
-    </div>`).join("")}</div>`;
-}
-
-function renderAlertChart(alarms = []) {
-  const box = $("chartRecentAlerts");
-  if (!box) return;
-  if (!alarms.length) return renderChartEmpty(box);
-
-  const counts = alarms.reduce((acc, alarm) => {
-    const sev = String(alarm.severidad || "").toLowerCase();
-    if (alarm.silenciada) acc.silenciadas += 1;
-    else if (sev === "critical" || sev === "critica" || sev === "crítica") acc.criticas += 1;
-    else acc.warning += 1;
-    return acc;
-  }, { criticas: 0, warning: 0, silenciadas: 0 });
-
-  box.innerHTML = `<div class="doc-alert-chips">
-    <span class="doc-alert-chip critical"><b>${counts.criticas}</b> Críticas</span>
-    <span class="doc-alert-chip warning"><b>${counts.warning}</b> Warning</span>
-    <span class="doc-alert-chip muted"><b>${counts.silenciadas}</b> Silenciadas</span>
-  </div>`;
-}
-
-function renderChartEmpty(box) {
-  box.innerHTML = `<div class="doc-chart-empty">Sin datos suficientes</div>`;
-}
-
-function renderDoctorAlerts(alarms = []) {
-  const box = $("doctorAlertsList");
-  if (!box) return;
-  if (!alarms.length) {
-    box.innerHTML = `<div class="dp-empty">Sin alertas recientes.</div>`;
-    return;
-  }
-
-  box.innerHTML = alarms.slice(0, 6).map(a => {
-    const sev = String(a.severidad || "warning").toLowerCase();
-    const cls = a.silenciada ? "muted" : (sev === "critical" ? "critical" : "warning");
-    return `<div class="doc-alert-row">
-      <span class="doc-alert-dot ${cls}"></span>
-      <div>
-        <div class="doc-alert-title">${escapeHtml(a.tipo || "Alerta")} · ${escapeHtml(a.patientCode || "—")}</div>
-        <div class="doc-alert-sub">${escapeHtml(a.patientName || "Paciente")} · ${formatDate(a.created_at)}</div>
-      </div>
     </div>`;
   }).join("");
 }
@@ -486,7 +498,7 @@ async function openPatientDetail(patientId) {
 }
 
 /* =========================================================
-   FICHA CLÃNICA PREMIUM
+   FICHA CLÍNICA PREMIUM
    ========================================================= */
 async function openClinicalRecord(patientId) {
   if (!patientId) return;
@@ -518,7 +530,7 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
 
   const fullName = `${patient.nombre || ""} ${patient.apellidos || ""}`.trim() || "Paciente";
   const initials = fullName.split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "P";
-  const doctorName = currentDoctor ? formatDoctorDisplayName(currentDoctor, "€”") : "€”";
+  const doctorName = currentDoctor ? formatDoctorDisplayName(currentDoctor, "—") : "—";
 
   const planPct  = Math.max(0, Math.min(100, Math.round(Number(plan?.porcentaje_avance || 0))));
   const planAcum = Number(plan?.horas_acumuladas || 0);
@@ -547,8 +559,8 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
     else alarmCounts.warning++;
   });
 
-  const stateColorMap = { ok: "#3f7f62", observacion: "#a07423", riesgo: "#b84f55", alta: "#5a48d4" };
-  const stateColor = stateColorMap[normalizeClinicalState(patient.estado_clinico)] || "#5a48d4";
+  const stateColorMap = { ok: "#15803d", observacion: "#b4560d", riesgo: "#c0152a", alta: "#5f3fb8" };
+  const stateColor = stateColorMap[normalizeClinicalState(patient.estado_clinico)] || "#5f3fb8";
 
   const timeline = [
     ...sessions.slice(0, 6).map(s => ({
@@ -564,7 +576,7 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
     ...alarms.slice(0, 3).map(a => {
       const sev = String(a.severidad || "").toLowerCase();
       const sub = a.silenciada ? "muted" : sev.includes("criti") ? "critical" : "warn";
-      return { date: a.created_at, type: "Alarma", detail: `${a.tipo || "—"} · ${a.severidad || "—"}`, cls: `tl-alarm ${sub}` };
+      return { date: a.created_at, type: "Alarma", detail: `${humanLabel(a.tipo)} · ${humanLabel(a.severidad)}`, cls: `tl-alarm ${sub}` };
     }),
   ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
 
@@ -574,10 +586,9 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
   const off  = +(circ / 4).toFixed(2);
 
   const modeRows = [
-    ["Reposo",  modeCounts.reposo,      "#c4c0e8"],
-    ["Conv.",   modeCounts.convencional, "#99b8dd"],
-    ["Intens.", modeCounts.intensivo,    "#b09af8"],
-    ["Auto",    modeCounts.automatico,   "#8dd4bd"],
+    ["Reposo",  modeCounts.reposo,      "#cfc8dc"],
+    ["Conv.",   modeCounts.convencional, "#6f9db3"],
+    ["Intens.", modeCounts.intensivo,    "#7a57d1"],
   ];
   const ledBadge = dominantMode === "intensivo" ? "badge-warn" : dominantMode === "convencional" ? "badge-ok" : "badge-neutral";
 
@@ -597,10 +608,12 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
           NEOLIGHT · Ficha Clínica
         </div>
         <div class="cr-topbar-actions">
-          <button class="cr-print-btn" id="crPrintBtn" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Imprimir / PDF
+          <button class="cr-print-btn" id="crPrintBtn" type="button" title="Respaldo clínico completo con tu firma">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Reporte médico PDF
           </button>
+          <button class="cr-print-btn" id="crExcelBtn" type="button" title="Reporte médico en Excel">Excel médico</button>
+          <button class="cr-print-btn" id="crFamilyBtn" type="button" title="Resumen sencillo para los papás">Para la familia</button>
           <button class="cr-close-btn" data-close="1" aria-label="Cerrar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -609,13 +622,19 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
 
       <div class="cr-hero">
         <div class="cr-hero-left">
-          <div class="cr-avatar">${escapeHtml(initials)}</div>
+          <div class="cr-avatar-col">
+            <div class="cr-avatar" id="crAvatar">${escapeHtml(initials)}</div>
+            <div class="cr-photo-actions">
+              <button type="button" id="crPhotoCam" title="Guarda la imagen actual de la cámara">Foto cámara</button>
+              <button type="button" id="crPhotoFile" title="Subir una foto">Subir</button>
+            </div>
+          </div>
           <div class="cr-hero-info">
             <div class="cr-hero-name">${escapeHtml(fullName)}</div>
             <div class="cr-hero-code">${escapeHtml(patient.codigo || "Sin código")}</div>
             <div class="cr-hero-tags">
-              <span class="cr-tag cr-tag-state" style="--state-color:${stateColor}">${escapeHtml(patient.estado_clinico || "ok")}</span>
-              <span class="cr-tag">${patient.dias_nacido ?? "—"} días nacido</span>
+              <span class="cr-tag cr-tag-state" style="--state-color:${stateColor}">${escapeHtml(humanLabel(patient.estado_clinico || "ok"))}</span>
+              <span class="cr-tag">${ageLabel(patient)}</span>
               ${plan ? `<span class="cr-tag">${escapeHtml((plan.modo_recomendado || "—").toUpperCase())}</span>` : ""}
             </div>
             <div class="cr-hero-meta-grid">
@@ -634,7 +653,7 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
                 stroke-dasharray="${dash} ${circ - dash}"
                 stroke-dashoffset="${off}" />
               <text x="36" y="42" text-anchor="middle"
-                font-size="10" font-weight="800" fill="#2d2a45" font-family="Inter,system-ui">${planPct}%</text>
+                font-size="10" font-weight="800" fill="#221b2e" font-family="Nunito,system-ui">${planPct}%</text>
             </svg>
             <div class="cr-hero-time-wrap">
               <div class="cr-hero-time-label">Terapia acumulada</div>
@@ -654,7 +673,7 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
           <div class="cr-widget-body">
             <div class="cr-widget-title">Intensidad LED</div>
             <div class="cr-widget-val">${escapeHtml(dominantMode.charAt(0).toUpperCase() + dominantMode.slice(1))}</div>
-            <div class="cr-widget-sub">${sessionCount} sesiÃ³n(es) registradas</div>
+            <div class="cr-widget-sub">${sessionCount} sesión(es) registradas</div>
           </div>
           <span class="cr-widget-badge ${ledBadge}">${escapeHtml(dominantMode)}</span>
         </div>
@@ -662,7 +681,7 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
           <div class="neo-widget-icon"><img src="./img/temp_body.png" alt="Temperatura bebé" /></div>
           <div class="cr-widget-body">
             <div class="cr-widget-title">Temperatura</div>
-            <div class="cr-widget-val"> ” / °C</div>
+            <div class="cr-widget-val">—</div>
             <div class="cr-widget-sub">Bebé / Ambiente · Tiempo real</div>
           </div>
           <span class="cr-widget-badge badge-neutral">En vivo</span>
@@ -730,8 +749,8 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
           ${alarms.length ? `
             <div class="cr-alarm-dist-chips">
               <div class="cr-adchip critica"><span>Críticas</span><b>${alarmCounts.criticas}</b></div>
-              <div class="cr-adchip warning"><span>Warning</span><b>${alarmCounts.warning}</b></div>
-              <div class="cr-adchip silenciada"><span>Silenciadas</span><b>${alarmCounts.silenciadas}</b></div>
+              <div class="cr-adchip warning"><span>Avisos</span><b>${alarmCounts.warning}</b></div>
+              <div class="cr-adchip silenciada"><span>Resueltas</span><b>${alarmCounts.silenciadas}</b></div>
             </div>` : `<div class="cr-chart-empty">Sin alarmas registradas</div>`}
         </div>
       </div>
@@ -749,7 +768,7 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
             return `<div class="cr-alarm-row">
               <span class="cr-al-dot ${dot}"></span>
               <div class="cr-al-body">
-                <div class="cr-al-name">${escapeHtml(a.tipo || "Alerta")}</div>
+                <div class="cr-al-name">${escapeHtml(humanLabel(a.tipo, "Alerta"))}</div>
                 <div class="cr-al-detail">${escapeHtml(a.mensaje || a.valor_medido || "—")} · ${formatDate(a.created_at)}</div>
               </div>
               <span class="cr-al-sev ${badge}">${escapeHtml(a.severidad || "—")}</span>
@@ -776,9 +795,11 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
         </div>
       </div>
 
+      ${signatureBlockHtml(currentDoctor)}
+
       <div class="cr-footer">
         <span>NEOLIGHT· ${escapeHtml(fullName)} · ${new Date().toLocaleDateString("es")}</span>
-        <button class="cr-print-btn-sm" id="crPrintBtnFoot" type="button">Imprimir PDF</button>
+        <button class="cr-print-btn-sm" id="crPrintBtnFoot" type="button">Reporte médico PDF</button>
       </div>
     </div>`;
 
@@ -786,11 +807,16 @@ function showClinicalRecordModal({ patient, plan, sessions, alarms, events }) {
 
   modal.querySelectorAll("[data-close]").forEach(el => el.addEventListener("click", () => modal.remove()));
 
-  const doPrint = () => {
-    modal.classList.add("cr-printing");
-    window.print();
-    setTimeout(() => modal.classList.remove("cr-printing"), 1000);
-  };
+  // Reportes del servidor: médico (con firma) y para la familia.
+  const doPrint = () => openReport(patient.id, "medico").catch(() => showDoctorFeedback("No se pudo generar el reporte.", "danger"));
+  document.getElementById("crExcelBtn")?.addEventListener("click", () =>
+    exportExcel(patient.id, "medico").catch(() => showDoctorFeedback("No se pudo exportar Excel.", "danger")));
+  document.getElementById("crFamilyBtn")?.addEventListener("click", () =>
+    openReport(patient.id, "familiar").catch(() => showDoctorFeedback("No se pudo generar el reporte.", "danger")));
+  const avatar = [document.getElementById("crAvatar")];
+  paintPatientPhoto(patient.id, avatar);
+  document.getElementById("crPhotoCam")?.addEventListener("click", () => savePhotoFromCamera(patient.id, avatar));
+  document.getElementById("crPhotoFile")?.addEventListener("click", () => pickPhotoFile(patient.id, avatar));
   document.getElementById("crPrintBtn")?.addEventListener("click", doPrint);
   document.getElementById("crPrintBtnFoot")?.addEventListener("click", doPrint);
 }
@@ -810,7 +836,7 @@ function showPatientDetailModal({ patient, plan, control, sessions, alarms, even
       <div class="modal-head">
         <div>
           <div class="modal-title">${escapeHtml(fullName)}</div>
-          <div class="modal-sub">${escapeHtml(patient.codigo || "Sin código")} · Tutor: ${escapeHtml(`${patient.tutor_nombre || ""} ${patient.tutor_apellidos || ""}`.trim() || "—")} · Dispositivo: ${escapeHtml(patient.disp_estado || "offline")}</div>
+          <div class="modal-sub">${escapeHtml(patient.codigo || "Sin código")} · Tutor: ${escapeHtml(`${patient.tutor_nombre || ""} ${patient.tutor_apellidos || ""}`.trim() || "—")} · Lámpara: ${escapeHtml(humanLabel(patient.disp_estado || "offline"))}</div>
         </div>
         <button class="modal-close" type="button" data-close="1" aria-label="Cerrar">x</button>
       </div>
@@ -827,12 +853,12 @@ function showPatientDetailModal({ patient, plan, control, sessions, alarms, even
             ${input("editPesoActual", "Peso actual (g)", patient.peso_actual_g, "number", "1")}
             ${input("editEdadGestacional", "Edad gestacional", patient.edad_gestacional_sem, "number", "0.1")}
           </div>
-          ${input("editDiagnostico", "DiagnÃ³stico", patient.diagnostico)}
+          ${input("editDiagnostico", "Diagnóstico", patient.diagnostico)}
           ${textarea("editObservaciones", "Observaciones", patient.observaciones)}
           <div class="form-grid three">
             ${input("editBiliInicial", "Bilirrubina inicial", patient.nivel_bilirrubina_inicial, "number", "0.01")}
             ${input("editBiliActual", "Bilirrubina actual", patient.nivel_bilirrubina_actual, "number", "0.01")}
-            ${select("editEstadoClinico", "Estado clínicos", ["ok","observacion","riesgo","alta"], patient.estado_clinico)}
+            ${select("editEstadoClinico", "Estado clínico", ["ok","observacion","riesgo","alta"], patient.estado_clinico)}
           </div>
           <div class="form-grid two">
             ${select("editGrupoSanguineo", "Grupo sanguíneo", ["","A","B","AB","O"], patient.grupo_sanguineo)}
@@ -844,32 +870,36 @@ function showPatientDetailModal({ patient, plan, control, sessions, alarms, even
 
         <aside>
           <div class="panel-title">Plan de terapia</div>
-          <div class="hint-box"><strong>${plan ? "Plan activo" : "Sin plan activo"}</strong><br><small>${plan ? `${plan.horas_acumuladas} / ${plan.horas_meta} h · ${plan.modo_recomendado}` : "Define una meta para activar seguimiento."}</small></div>
+          <div class="hint-box"><strong>${plan ? "Plan activo" : "Sin plan activo"}</strong><br><small>${plan ? `${plan.horas_acumuladas} / ${plan.horas_meta} h · ${humanLabel(plan.modo_recomendado)}` : "Define una meta para activar seguimiento."}</small></div>
           <div class="progress-track"><span style="width:${Math.max(0, Math.min(100, planPct))}%"></span></div>
           <div class="form-grid two">
             ${input("planHoras", "Meta total (h)", plan?.horas_meta || "", "number", "0.25")}
-            ${select("planModo", "Modo recomendado", ["convencional","intensivo","automatico"], plan?.modo_recomendado || "convencional")}
+            ${select("planModo", "Modo recomendado", ["convencional","intensivo"], plan?.modo_recomendado || "convencional")}
           </div>
           ${textarea("planObs", "Observaciones del plan", plan?.observaciones)}
+          ${textarea("planMotivo", plan ? "Motivo del cambio (obligatorio si cambias la meta o el modo)" : "Motivo de la indicación (opcional)", "")}
           <button class="btn btn-primary btn-full" id="savePlanBtn">${plan ? "Actualizar plan" : "Crear plan"}</button>
           ${plan ? `<button class="btn btn-secondary btn-full" id="cancelPlanBtn">Cancelar plan</button>` : ""}
+          <div class="panel-title spaced">Cambios del plan</div>
+          <div class="plan-cambios" id="planCambiosList"><small>Cargando…</small></div>
 
-          <div class="panel-title spaced">Permisos y modo</div>
+          <div class="panel-title spaced">Permisos del tutor</div>
           ${select("controlMode", "Permiso tutor", ["bloqueado","manual","automatico"], control?.modo_control || "bloqueado")}
           ${input("controlUntil", "Habilitado hasta", toDatetimeLocal(control?.habilitado_hasta), "datetime-local")}
           ${input("controlReason", "Motivo", control?.motivo)}
           <button class="btn btn-secondary btn-full" id="saveControlBtn">Guardar permisos</button>
+          <div class="panel-title spaced">Cambiar modo de la lámpara</div>
           <div class="mode-row">
-            ${["reposo","convencional","intensivo","automatico"].map(m => `<button class="btn-mini" data-doctor-mode="${m}">${m}</button>`).join("")}
+            ${["reposo","convencional","intensivo"].map(m => `<button class="btn-mini" data-doctor-mode="${m}">${humanLabel(m)}</button>`).join("")}
           </div>
-          <button class="btn btn-secondary btn-full" id="exportPatientBtn">Exportar Excel</button>
+          <button class="btn btn-secondary btn-full" id="exportPatientBtn">Exportar Excel médico</button>
         </aside>
       </div>
 
       <div class="clinical-layout history-layout">
-        ${historyTable("Sesiones", sessions.map(s => [formatDate(s.fecha || s.created_at), s.modo_programado || "-", secondsLabel(s.duracion_s), s.status || "-"]))}
-        ${historyTable("Alarmas", alarms.map(a => [formatDate(a.created_at), a.tipo || "-", a.severidad || "-", a.mensaje || a.valor_medido || "-"]))}
-        ${historyTable("Eventos", events.map(e => [formatDate(e.created_at), e.tipo || "-", e.cuenta_nombre || "-", e.descripcion || "-"]))}
+        ${historyTable("Sesiones", sessions.map(s => [formatDate(s.fecha || s.created_at), humanLabel(s.modo_programado, "-"), secondsLabel(s.duracion_s), humanLabel(s.status, "-")]))}
+        ${historyTable("Alarmas", alarms.map(a => [formatDate(a.created_at), humanLabel(a.tipo, "-"), humanLabel(a.severidad, "-"), a.mensaje || a.valor_medido || "-"]))}
+        ${historyTable("Eventos", events.map(e => [formatDate(e.created_at), humanLabel(e.tipo, "-"), e.cuenta_nombre || "-", e.descripcion || "-"]))}
       </div>
     </div>`;
 
@@ -877,9 +907,10 @@ function showPatientDetailModal({ patient, plan, control, sessions, alarms, even
   modal.querySelectorAll("[data-close]").forEach(el => el.addEventListener("click", () => modal.remove()));
   $("savePatientClinicalBtn")?.addEventListener("click", () => savePatientClinical(patient.id));
   $("savePlanBtn")?.addEventListener("click", () => savePlan(patient.id, plan?.id || null));
+  renderPlanCambios(patient.id);
   $("cancelPlanBtn")?.addEventListener("click", () => doCancelPlan(patient.id, plan.id));
   $("saveControlBtn")?.addEventListener("click", () => saveControl(patient.id, patient.tutor_id));
-  $("exportPatientBtn")?.addEventListener("click", () => exportExcel(patient.id).catch(() => showDoctorFeedback("No se pudo exportar Excel.", "danger")));
+  $("exportPatientBtn")?.addEventListener("click", () => exportExcel(patient.id, "medico").catch(() => showDoctorFeedback("No se pudo exportar Excel.", "danger")));
   modal.querySelectorAll("[data-doctor-mode]").forEach(btn =>
     btn.addEventListener("click", () => setDoctorMode(patient.id, btn.dataset.doctorMode))
   );
@@ -918,16 +949,32 @@ async function savePlan(patientId, planId) {
     hours_target: numberOrNull("planHoras"),
     modo_recomendado: value("planModo"),
     observaciones: value("planObs") || null,
+    motivo: value("planMotivo") || null,
   };
-  if (!payload.hours_target || payload.hours_target <= 0) return showDoctorFeedback("Define una meta de horas vÃ¡lida.", "warn");
+  if (!payload.hours_target || payload.hours_target <= 0) return showDoctorFeedback("Define una meta de horas válida.", "warn");
   const res = planId ? await updatePlan(patientId, planId, payload) : await createPlan(patientId, payload);
   if (!res.ok) return showDoctorFeedback(res.data?.message || "No se pudo guardar el plan.", "danger");
   $("doctorPatientModal")?.remove();
   loadDoctorDashboard();
 }
 
+async function renderPlanCambios(patientId) {
+  const box = $("planCambiosList");
+  if (!box) return;
+  const res = await fetchPlanCambios(patientId).catch(() => null);
+  const list = res?.data?.cambios || [];
+  box.innerHTML = list.length ? list.map(c => `
+    <div class="plan-cambio">
+      <b>${escapeHtml(c.resumen)}</b>
+      <span>${escapeHtml(c.fecha_txt)} · ${escapeHtml(c.doctor || "Sistema")}${c.avance_txt ? ` · avance ${escapeHtml(c.avance_txt)}` : ""}</span>
+      ${c.motivo ? `<em>Motivo: ${escapeHtml(c.motivo)}</em>` : ""}
+    </div>`).join("") : `<small>Todavía no hay cambios registrados.</small>`;
+}
+
 async function doCancelPlan(patientId, planId) {
-  const res = await cancelPlan(patientId, planId);
+  const motivo = value("planMotivo") || window.prompt("Motivo para cancelar el plan:") || "";
+  if (!motivo.trim()) return showDoctorFeedback("Escribe el motivo para cancelar el plan.", "warn");
+  const res = await cancelPlan(patientId, planId, motivo.trim());
   if (!res.ok) return showDoctorFeedback(res.data?.message || "No se pudo cancelar el plan.", "danger");
   $("doctorPatientModal")?.remove();
   loadDoctorDashboard();
@@ -940,131 +987,26 @@ async function saveControl(patientId, tutorId) {
     motivo: value("controlReason") || null,
     tutor_id: tutorId || null,
   });
-  if (!res.ok) return showDoctorFeedback(res.data?.message || "No se pudieron guardar permisos.", "danger");
-  showDoctorFeedback("Permisos actualizados.", "ok");
+  if (!res.ok) {
+    return showDoctorFeedback(res.data?.message || "No se pudieron guardar los permisos.", "danger");
+  }
+  showDoctorFeedback(value("controlMode") === "manual"
+    ? "Control manual autorizado. El tutor debe activar la clave en el equipo."
+    : "Permisos actualizados.", "ok");
 }
 
 async function setDoctorMode(patientId, mode) {
   const res = await doctorSetMode(patientId, mode);
-  showDoctorFeedback(res.ok ? `Modo ${mode} enviado.` : (res.data?.message || "No se pudo cambiar el modo."), res.ok ? "ok" : "danger");
+  showDoctorFeedback(res.ok ? `Modo ${humanLabel(mode).toLowerCase()} enviado a la lámpara.` : (res.data?.message || "No se pudo cambiar el modo."), res.ok ? "ok" : "danger");
 }
 
-export function renderDoctorPdfData(patients = [], requests = [], alerts = {}) {
-  const report = $("doctorPdfReport");
-  if (!report) return;
-
-  const doctorName = formatDoctorDisplayName(currentDoctor, "Doctor");
-  const activeSessions = patients.filter(p => Number(p.sesiones_activas || 0) > 0).length;
-  const generatedAt = new Date().toLocaleString("es");
-  const sessions = alerts.sessions || [];
-  const events = alerts.events || [];
-  const alarms = alerts.recent || [];
-  const chartsHtml = renderPdfCharts(patients, sessions, alarms);
-  const systemRows = [
-    ["MySQL", "Conexion por API"],
-    ["ESP32", "Sistema activo / pendiente de telemetria"],
-    ["Socket.IO", "Tiempo real habilitado"],
-  ];
-
-  report.innerHTML = `
-    <div class="pdf-header">
-      <div>
-        <div class="pdf-brand">NEOLIGHT</div>
-        <h1>Resumen del perfil doctor</h1>
-        <p>Generado: ${escapeHtml(generatedAt)}</p>
-      </div>
-      <div class="pdf-doctor-box">
-        <strong>${escapeHtml(doctorName)}</strong>
-        <span>${escapeHtml(currentDoctor?.especialidad || "Especialidad no registrada")}</span>
-        <span>Matrícula: ${escapeHtml(currentDoctor?.matricula || currentDoctor?.matricula_profesional || "—")}</span>
-      </div>
-    </div>
-
-    <div class="pdf-kpi-grid">
-      ${pdfKpi("Pacientes asignados", patients.length)}
-      ${pdfKpi("Solicitudes pendientes", requests.length)}
-      ${pdfKpi("Alertas del dia", alerts.today || 0)}
-      ${pdfKpi("Sesiones activas", activeSessions)}
-    </div>
-
-    <section class="pdf-section">
-      <h2>Graficos del resumen</h2>
-      ${chartsHtml}
-    </section>
-
-    <section class="pdf-section">
-      <h2>Pacientes recientes</h2>
-      ${pdfTable(["Codigo","Nombre","Dias nacido","Estado clinico","Tutor"], patients.slice(0, 12).map(p => [
-        p.codigo || "—",
-        `${p.nombre || ""} ${p.apellidos || ""}`.trim() || "Paciente",
-        p.dias_nacido ?? "—",
-        p.estado_clinico || "—",
-        `${p.tutor_nombre || ""} ${p.tutor_apellidos || ""}`.trim() || "—",
-      ]))}
-    </section>
-
-    <section class="pdf-section">
-      <h2>Ãšltimos eventos disponibles</h2>
-      ${pdfTable(["Paciente","Tipo","Detalle"], requests.slice(0, 10).map(r => [
-        `${r.nombre || r.paciente_nombre || ""} ${r.apellidos || r.paciente_apellidos || ""}`.trim() || "Paciente",
-        r.mode || r.modo ? "Cambio de modo" : "Ingreso",
-        r.mode || r.modo || r.doctor_request_status || "Pendiente",
-      ]))}
-    </section>
-
-    <section class="pdf-section">
-      <h2>Ultimos eventos disponibles</h2>
-      ${pdfTable(["Fecha","Paciente","Tipo","Detalle"], events.slice(0, 8).map(e => [
-        formatDate(e.created_at),
-        e.patientName || e.patientCode || "—",
-        e.tipo || "—",
-        e.descripcion || e.actor || "—",
-      ]))}
-    </section>
-
-    <section class="pdf-section">
-      <h2>Ãšltimas sesiones</h2>
-      ${pdfTable(["Fecha","Paciente","Modo","Duración","Estado"], sessions.slice(0, 8).map(s => [
-        formatDate(s.fecha || s.created_at),
-        s.patientName || s.patientCode || "—",
-        s.modo_final || s.modo_programado || "—",
-        secondsLabel(s.duracion_s),
-        s.status || "—",
-      ]))}
-    </section>
-
-    <section class="pdf-section">
-      <h2>Alarmas recientes</h2>
-      ${pdfTable(["Fecha","Paciente","Tipo","Severidad","Mensaje"], alarms.slice(0, 8).map(a => [
-        formatDate(a.created_at),
-        a.patientName || a.patientCode || "—",
-        a.tipo || "—",
-        a.severidad || "—",
-        a.mensaje || a.valor_medido || "—",
-      ]))}
-    </section>
-
-    <section class="pdf-section">
-      <h2>Estado del sistema</h2>
-      ${pdfTable(["Componente","Estado"], systemRows)}
-    </section>`;
-  report.querySelector(".pdf-section:nth-of-type(3) h2")?.replaceChildren(document.createTextNode("Solicitudes pendientes"));
-}
-
-export function downloadDoctorPdfReport() {
-  renderDoctorPdfData(
-    currentDoctorReport.patients,
-    [...currentDoctorReport.requests, ...currentDoctorReport.modeRequests],
-    currentDoctorReport.alerts
-  );
-  const report = $("doctorPdfReport");
-  if (report) report.setAttribute("aria-hidden", "false");
-  window.print();
-  window.setTimeout(() => report?.setAttribute("aria-hidden", "true"), 500);
-}
-
-export function bindDoctorReportButton() {
-  $("downloadDoctorPdfBtn")?.addEventListener("click", downloadDoctorPdfReport);
+function ageLabel(patient) {
+  let days = patient?.dias_nacido;
+  if (days == null && patient?.fecha_nac) {
+    const born = new Date(patient.fecha_nac);
+    if (!Number.isNaN(born.getTime())) days = Math.max(0, Math.floor((Date.now() - born.getTime()) / 86_400_000));
+  }
+  return days == null ? "Edad no registrada" : `${days} ${days === 1 ? "día" : "días"} de vida`;
 }
 
 function numberOrNull(id) {
@@ -1085,7 +1027,7 @@ function textarea(id, label, val = "") {
 }
 
 function select(id, label, options, selected) {
-  return `<div class="input-group"><label>${label}</label><div class="input-wrapper select-wrapper"><select id="${id}" class="select">${options.map(o => `<option value="${escapeAttr(o)}" ${String(o) === String(selected || "") ? "selected" : ""}>${o || "—"}</option>`).join("")}</select></div></div>`;
+  return `<div class="input-group"><label>${label}</label><div class="input-wrapper select-wrapper"><select id="${id}" class="select">${options.map(o => `<option value="${escapeAttr(o)}" ${String(o) === String(selected || "") ? "selected" : ""}>${o ? escapeHtml(humanLabel(o)) : "—"}</option>`).join("")}</select></div></div>`;
 }
 
 function historyTable(title, rows) {
@@ -1124,71 +1066,6 @@ function normalizeClinicalState(value) {
   if (st.includes("riesgo") || st.includes("peligro")) return "riesgo";
   if (st.includes("observ")) return "observacion";
   return "ok";
-}
-
-function renderPdfCharts(patients = [], sessions = [], alarms = []) {
-  const stateCounts = { ok: 0, observacion: 0, riesgo: 0, alta: 0 };
-  patients.forEach(p => { stateCounts[normalizeClinicalState(p.estado_clinico)] += 1; });
-
-  const modeCounts = { reposo: 0, convencional: 0, intensivo: 0, automatico: 0 };
-  sessions.forEach(s => {
-    const mode = normalizeMode(s.modo_final || s.modo_programado || s.modo) || "reposo";
-    modeCounts[mode] = (modeCounts[mode] || 0) + 1;
-  });
-
-  const alertCounts = alarms.reduce((acc, alarm) => {
-    const sev = String(alarm.severidad || "").toLowerCase();
-    if (alarm.silenciada) acc.silenciadas += 1;
-    else if (sev === "critical" || sev === "critica" || sev === "crítica") acc.criticas += 1;
-    else acc.warning += 1;
-    return acc;
-  }, { criticas: 0, warning: 0, silenciadas: 0 });
-
-  return `<div class="pdf-chart-grid">
-    ${pdfBarChart("Estados clinicos", [
-      ["OK", stateCounts.ok],
-      ["Observacion", stateCounts.observacion],
-      ["Riesgo", stateCounts.riesgo],
-      ["Alta", stateCounts.alta],
-    ])}
-    ${pdfBarChart("Sesiones por modo", [
-      ["Reposo", modeCounts.reposo],
-      ["Conv.", modeCounts.convencional],
-      ["Intens.", modeCounts.intensivo],
-      ["Auto", modeCounts.automatico],
-    ])}
-    ${pdfBarChart("Alertas recientes", [
-      ["Criticas", alertCounts.criticas],
-      ["Warning", alertCounts.warning],
-      ["Silenciadas", alertCounts.silenciadas],
-    ])}
-  </div>`;
-}
-
-function pdfBarChart(title, rows) {
-  const max = Math.max(1, ...rows.map(([, value]) => Number(value) || 0));
-  return `<div class="pdf-chart-card">
-    <h3>${escapeHtml(title)}</h3>
-    <div class="pdf-bars">
-      ${rows.map(([label, value]) => `<div class="pdf-bar-row">
-        <span>${escapeHtml(label)}</span>
-        <div><i style="width:${Math.max(4, (Number(value || 0) / max) * 100)}%"></i></div>
-        <b>${escapeHtml(value)}</b>
-      </div>`).join("")}
-    </div>
-  </div>`;
-}
-
-function pdfKpi(label, value) {
-  return `<div class="pdf-kpi"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
-}
-
-function pdfTable(headers, rows) {
-  if (!rows.length) return `<div class="pdf-empty">Sin datos disponibles.</div>`;
-  return `<table class="pdf-table">
-    <thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(row => `<tr>${row.map(c => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`).join("")}</tbody>
-  </table>`;
 }
 
 function setText(id, value) {
@@ -1230,56 +1107,4 @@ async function handleArchive(patientId) {
     showDoctorFeedback("No se pudo conectar con el servidor.", "danger");
   }
   loadDoctorDashboard();
-}
-
-export function bindDoctorSections() {
-  const navItems = document.querySelectorAll("#view-dashboard-doctor [data-section-target]");
-  const sections = document.querySelectorAll("#view-dashboard-doctor .doctor-section[data-section]");
-  if (!navItems.length || !sections.length) return;
-
-  const showSection = sectionName => {
-    sections.forEach(section => {
-      section.classList.toggle("active", section.dataset.section === sectionName);
-    });
-    navItems.forEach(btn => {
-      btn.classList.toggle("dp-nav-active", btn.dataset.sectionTarget === sectionName);
-    });
-    const viewTop = $("view-dashboard-doctor")?.offsetTop || 0;
-    window.scrollTo({ top: viewTop, behavior: "smooth" });
-  };
-
-  navItems.forEach(btn => {
-    btn.style.cursor = "pointer";
-    btn.addEventListener("click", () => showSection(btn.dataset.sectionTarget || "resumen"));
-  });
-
-  const initial = document.querySelector("#view-dashboard-doctor .doctor-section.active")?.dataset.section || "resumen";
-  showSection(initial);
-}
-
-function defaultRate(v) { return v === "int" ? 0.30 : 0.15; }
-
-function bindPlanCalculator() {
-  const planIntensity = $("planIntensity");
-  const planRate = $("planRate");
-  const planResult = $("planResult");
-  if (planRate && planIntensity) planRate.value = String(defaultRate(planIntensity.value));
-  planIntensity?.addEventListener("change", () => {
-    planRate.value = String(defaultRate(planIntensity.value));
-  });
-  $("calcPlanBtn")?.addEventListener("click", () => {
-    const tsb = Number((($("planTSB")?.value || "").replace(",",".")));
-    const goal = Number((($("planGoal")?.value || "").replace(",",".")));
-    let rate = Number(((planRate?.value || "").replace(",",".")));
-    if (!Number.isFinite(tsb) || !Number.isFinite(goal) || tsb <= goal) {
-      if (planResult) planResult.textContent = " ";
-      return;
-    }
-    if (!Number.isFinite(rate) || rate <= 0) {
-      rate = defaultRate(planIntensity?.value);
-      if (planRate) planRate.value = String(rate);
-    }
-    const totalMin = Math.max(0, Math.round((tsb - goal) / rate * 60));
-    if (planResult) planResult.textContent = `${Math.floor(totalMin / 60)}h ${String(totalMin % 60).padStart(2,"0")}m aprox.`;
-  });
 }
