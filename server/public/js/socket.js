@@ -4,13 +4,14 @@
 // pacientes online/offline y comandos de modo/altura
 // =========================================================
 
-import { API_URL, $ } from "./config.js";
+import { API_URL, $, getToken } from "./config.js";
 
 let ioSocket = null;
 let alarmsMutedUI = false;
 let identifiedPatientId = null;
 let identifiedDoctorId = null;
 let identifiedTutorId = null;
+let identifiedSuperuserId = null;
 
 // =========================================================
 // ALARMAS PEDIÁTRICAS: sonido suave + campanita
@@ -50,7 +51,7 @@ function playPediatricAlarmSound() {
   } catch (_) {}
 }
 
-function animatePatientAlarmUI(payload = {}) {
+function animatePatientAlarmUI(payload = {}, opts = {}) {
   const bell = $("patientBell") || document.querySelector("#view-dashboard-patient .pt-bell-btn");
   const badge = $("ptBellBadge");
   const card = $("ptAlertCard");
@@ -76,7 +77,25 @@ function animatePatientAlarmUI(payload = {}) {
   if (msg) msg.textContent = `Alerta: ${alarmName}`;
   if (cnt) cnt.textContent = badge?.textContent || "1";
 
-  playPediatricAlarmSound();
+  if (opts.sound) playPediatricAlarmSound();
+}
+
+function shouldPlayAlarmSound(payload = {}) {
+  const sev = String(payload?.severidad || payload?.severity || "").toLowerCase();
+  const tipo = String(payload?.tipo || payload?.type || "").toLowerCase();
+  const valor = Number(payload?.valor ?? payload?.valor_medido ?? payload?.value);
+
+  if (sev === "critical") return true;
+
+  if (tipo === "temperatura_baja") {
+    return Number.isFinite(valor) ? valor < 34.8 : true;
+  }
+
+  if (tipo === "temperatura_alta") {
+    return Number.isFinite(valor) ? valor > 38.0 : true;
+  }
+
+  return false;
 }
 
 // =========================================================
@@ -87,8 +106,8 @@ export function setESPStatus(text, kind) {
   const tag = $("espStatus"); if (!tag) return;
   tag.textContent = text;
   tag.style.color =
-    kind === "ok"   ? "#4a7c3f" :
-    kind === "warn" ? "#b87a2a" : "#c4462a";
+    kind === "ok"   ? "#15803d" :
+    kind === "warn" ? "#b4560d" : "#c0152a";
 }
 
 export function updateHUD(data) {
@@ -157,6 +176,66 @@ function dispatchRealtimeEvent(name, detail) {
   window.dispatchEvent(new CustomEvent(`neolight:${name}`, { detail: detail || {} }));
 }
 
+
+// =========================================================
+// NOTIFICACIONES EN TIEMPO REAL (tipo Facebook, sin refresh)
+// =========================================================
+let notificationAudioCtx = null;
+let lastNotificationSoundAt = 0;
+
+export function playNotificationSound() {
+  const now = Date.now();
+  if (now - lastNotificationSoundAt < 900) return;
+  lastNotificationSoundAt = now;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    notificationAudioCtx = notificationAudioCtx || new AudioContextClass();
+    const ctx = notificationAudioCtx;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(740, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(980, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.035, ctx.currentTime + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+  } catch (_) {}
+}
+
+export function showRealtimeToast(message, kind = "status") {
+  let stack = document.getElementById("neolightRealtimeToasts");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.id = "neolightRealtimeToasts";
+    stack.className = "neolight-toast-stack";
+    document.body.appendChild(stack);
+  }
+  const toast = document.createElement("div");
+  toast.className = `neolight-toast neolight-toast--${kind}`;
+  toast.textContent = message;
+  stack.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("show"));
+  window.setTimeout(() => {
+    toast.classList.remove("show");
+    window.setTimeout(() => toast.remove(), 250);
+  }, 4200);
+}
+
+function isPayloadForCurrentDoctor(payload = {}) {
+  return !!identifiedDoctorId && (!payload?.doctor_id || String(payload.doctor_id) === String(identifiedDoctorId));
+}
+
+function isPayloadForCurrentPatient(payload = {}) {
+  return !!identifiedPatientId && (!payload?.paciente_id || String(payload.paciente_id) === String(identifiedPatientId));
+}
+
 // =========================================================
 // INIT SOCKET
 // =========================================================
@@ -164,23 +243,36 @@ function dispatchRealtimeEvent(name, detail) {
 export function initSocket() {
   if (ioSocket) return ioSocket;
   try {
-    ioSocket = io(API_URL, { transports: ["websocket"], reconnection: true });
+    ioSocket = io(API_URL, {
+      transports: ["websocket"], reconnection: true,
+      auth: callback => callback({ token: getToken() }),      // el servidor solo acepta conexiones con sesión
+    });
+
+    ioSocket.on("connect_error", error => {
+      if (error?.message === "sesion_requerida") window.dispatchEvent(new CustomEvent("neolight:session-expired"));
+    });
+    // La lámpara rechazó una orden: se explica el motivo en vez de fallar en silencio.
+    ioSocket.on("lamp:denied", payload => {
+      showRealtimeToast(payload?.message || "La lámpara no aceptó la orden.", "warn");
+      dispatchRealtimeEvent("lamp-denied", payload || {});
+    });
 
     ioSocket.on("connect",    () => {
-      setESPStatus("Online", "ok");
+      setESPStatus("Esperando…", "warn");
       if (identifiedDoctorId) socketIdentifyDoctor(identifiedDoctorId);
+      if (identifiedSuperuserId) socketIdentifySuperuser(identifiedSuperuserId);
       if (identifiedPatientId) ioSocket.emit("patient:identify", { id: identifiedPatientId });
       if (identifiedPatientId || identifiedTutorId) socketIdentifyTutor(identifiedTutorId, identifiedPatientId);
     });
     ioSocket.on("disconnect", () => {
-      setESPStatus("Offline", "err");
+      setESPStatus("Sin servidor", "err");
       updateHUD({});
       updateTemps({});
       updateStatusCard(null);
     });
 
     ioSocket.on("lamp:port", st => {
-      setESPStatus(st?.open ? "Online" : "Sin conexión", st?.open ? "ok" : "warn");
+      setESPStatus(st?.open ? "Conectada" : "Sin conexión", st?.open ? "ok" : "warn");
       if (!st?.open) { updateHUD({}); updateTemps({}); }
       dispatchRealtimeEvent("esp32-status", st || {});
     });
@@ -190,29 +282,48 @@ export function initSocket() {
       if (payload?.temp_bebe != null || payload?.temp_ambiente != null) updateTemps(payload || {});
       if (payload?.estado) updateStatusCard(payload || {});
       if (payload?.alarms_muted != null) updateMuteButtonFromState(!!payload.alarms_muted);
-      setESPStatus("Online", "ok");
+      setESPStatus(payload?.esp32_connected === false ? "Sin conexión" : "Conectada", payload?.esp32_connected === false ? "warn" : "ok");
       dispatchRealtimeEvent("telemetry", payload || {});
     });
 
     ioSocket.on("temps",  payload => { updateTemps(payload || {}); dispatchRealtimeEvent("temps", payload || {}); });
     ioSocket.on("status", payload => { updateStatusCard(payload); dispatchRealtimeEvent("status", payload || {}); });
     ioSocket.on("esp32:status", payload => {
-      setESPStatus(payload?.connected ? "Online" : "Sin conexion", payload?.connected ? "ok" : "warn");
+      setESPStatus(payload?.connected ? "Conectada" : "Sin conexión", payload?.connected ? "ok" : "warn");
       dispatchRealtimeEvent("esp32-status", payload || {});
+    });
+
+    // Cuna balanza (equipo propio)
+    ioSocket.on("cuna", payload => dispatchRealtimeEvent("cuna", payload || {}));
+
+    // Verificación del antifaz
+    ioSocket.on("antifaz:estado", payload => dispatchRealtimeEvent("antifaz-estado", payload || {}));
+    ioSocket.on("antifaz:alarma", payload => {
+      // El tutor solo recibe la alarma de su propio bebé.
+      if (identifiedPatientId && payload?.paciente_id && String(payload.paciente_id) !== String(identifiedPatientId)) return;
+      dispatchRealtimeEvent("antifaz-alarma", payload || {});
     });
 
     ioSocket.on("alarm:new", payload => {
       console.warn("[ALARM]", payload?.tipo, payload?.severidad);
-      animatePatientAlarmUI(payload || {});
+      if (isPayloadForCurrentPatient(payload || {}) || isPayloadForCurrentDoctor(payload || {})) {
+        const sev = String(payload?.severidad || "").toLowerCase();
+        const shouldSound = shouldPlayAlarmSound(payload || {});
+        animatePatientAlarmUI(payload || {}, { sound: shouldSound });
+        const label = payload?.mensaje || payload?.tipo || "Alarma del sistema";
+        // Las alarmas del antifaz ya muestran su propio aviso grande.
+        const isAntifaz = /antifaz|ojos_expuestos/.test(String(payload?.tipo || ""));
+        if (!isAntifaz) showRealtimeToast(`Alerta: ${label}`, sev === "critical" ? "danger" : "warn");
+      }
       dispatchRealtimeEvent("alarm-new", payload || {});
     });
 
     ioSocket.on("alarm", payload => {
-      animatePatientAlarmUI(payload || {});
+      animatePatientAlarmUI(payload || {}, { sound: shouldPlayAlarmSound(payload || {}) });
       dispatchRealtimeEvent("alarm-new", payload || {});
     });
     ioSocket.on("alarma", payload => {
-      animatePatientAlarmUI(payload || {});
+      animatePatientAlarmUI(payload || {}, { sound: shouldPlayAlarmSound(payload || {}) });
       dispatchRealtimeEvent("alarm-new", payload || {});
     });
     ioSocket.on("alarm:muted", payload => dispatchRealtimeEvent("alarm-muted", payload || {}));
@@ -220,11 +331,47 @@ export function initSocket() {
     ioSocket.on("session:paused",   payload => { console.log("[SESSION] paused",  payload); dispatchRealtimeEvent("session-paused", payload || {}); });
     ioSocket.on("session:finished", payload => { console.log("[SESSION] finished",payload); dispatchRealtimeEvent("session-finished", payload || {}); });
     ioSocket.on("plan:updated", payload => dispatchRealtimeEvent("plan-updated", payload || {}));
-    ioSocket.on("doctor-request:new", payload => dispatchRealtimeEvent("doctor-request-new", payload || {}));
-    ioSocket.on("doctor-request:resolved", payload => dispatchRealtimeEvent("doctor-request-resolved", payload || {}));
+    ioSocket.on("plan:progreso", payload => {
+      if (isPayloadForCurrentPatient(payload || {}) || isPayloadForCurrentDoctor(payload || {}))
+        dispatchRealtimeEvent("plan-progreso", payload || {});
+    });
+    ioSocket.on("plan:completado", payload => {
+      const forPatient = isPayloadForCurrentPatient(payload || {});
+      const forDoctor = isPayloadForCurrentDoctor(payload || {});
+      if (forPatient || forDoctor) dispatchRealtimeEvent("plan-completado", { ...(payload || {}), forPatient, forDoctor });
+    });
+    ioSocket.on("doctor-request:new", payload => {
+      if (isPayloadForCurrentDoctor(payload || {})) {
+        playNotificationSound();
+        showRealtimeToast("Nueva solicitud de paciente", "info");
+      }
+      dispatchRealtimeEvent("doctor-request-new", payload || {});
+    });
+    ioSocket.on("doctor-request:resolved", payload => {
+      if (isPayloadForCurrentPatient(payload || {})) {
+        playNotificationSound();
+        showRealtimeToast(payload?.status === "accepted" ? "Solicitud aceptada" : "Solicitud rechazada", payload?.status === "accepted" ? "ok" : "warn");
+      }
+      dispatchRealtimeEvent("doctor-request-resolved", payload || {});
+    });
     ioSocket.on("patient:registered", payload => dispatchRealtimeEvent("patient-registered", payload || {}));
-    ioSocket.on("mode-request:new", payload => dispatchRealtimeEvent("mode-request-new", payload || {}));
-    ioSocket.on("mode-request:resolved", payload => dispatchRealtimeEvent("mode-request-resolved", payload || {}));
+    ioSocket.on("mode-request:new", payload => {
+      if (isPayloadForCurrentDoctor(payload || {})) {
+        playNotificationSound();
+        const label = payload?.request_type === "manual_control" ? "control manual" : `modo ${payload?.mode || ""}`.trim();
+        showRealtimeToast(`Nueva solicitud de ${label}`, "info");
+      }
+      dispatchRealtimeEvent("mode-request-new", payload || {});
+    });
+    ioSocket.on("mode-request:resolved", payload => {
+      if (isPayloadForCurrentPatient(payload || {})) {
+        playNotificationSound();
+        const ok = payload?.status === "accepted";
+        const label = payload?.request_type === "manual_control" ? "control manual" : `modo ${payload?.mode || ""}`.trim();
+        showRealtimeToast(`${ok ? "Aprobado" : "Rechazado"}: ${label}`, ok ? "ok" : "warn");
+      }
+      dispatchRealtimeEvent("mode-request-resolved", payload || {});
+    });
     ioSocket.on("lamp:command", payload => dispatchRealtimeEvent("lamp-command", payload || {}));
 
     ioSocket.on("control:updated", payload => {
@@ -241,6 +388,7 @@ export function disconnectSocket() {
   identifiedPatientId = null;
   identifiedDoctorId = null;
   identifiedTutorId = null;
+  identifiedSuperuserId = null;
   if (ioSocket) { ioSocket.disconnect(); ioSocket = null; }
 }
 
@@ -284,4 +432,10 @@ export function socketIdentifyTutor(tutorId, pacienteId = identifiedPatientId) {
   identifiedPatientId = pacienteId ? String(pacienteId) : identifiedPatientId;
   if (!ioSocket?.connected || !identifiedPatientId) return;
   ioSocket.emit("client:identify", { role: "tutor", tutor_id: identifiedTutorId, paciente_id: identifiedPatientId });
+}
+
+export function socketIdentifySuperuser(superuserId) {
+  identifiedSuperuserId = superuserId ? String(superuserId) : null;
+  if (!ioSocket?.connected || !identifiedSuperuserId) return;
+  ioSocket.emit("client:identify", { role: "superuser", superuser_id: identifiedSuperuserId });
 }

@@ -1,0 +1,346 @@
+/* NEOLIGHT | Autenticación, formularios y compatibilidad pública
+   Archivo generado al modularizar styles.css sin alterar el orden de cascada. */
+
+/* =========================================================
+   MEDICAL UI REFINEMENT
+   Scoped polish layer: keeps existing HTML, IDs and bindings.
+   ========================================================= */
+:root {
+  --soft-white:var(--nl-surface);
+  --cream:var(--nl-surface-2);
+  --warm-white:var(--nl-surface);
+  --sandy:var(--nl-sky);
+  --seafoam:var(--nl-ok-soft);
+  --sage:var(--nl-faint);
+  --gossamer:var(--nl-ok-soft);
+  --hazy-blue:var(--nl-muted);
+  --delicate-blue:var(--nl-sky);
+  --periwinkle:var(--nl-sky);
+  --dusty-rose:var(--nl-coral);
+  --baby-pink:var(--nl-coral);
+  --pastel-yellow:var(--nl-sun);
+  --muted-plum:var(--nl-muted);
+  --ink:var(--nl-ink);
+  --muted-ink:rgb(var(--nl-ink-rgb) / 0.64);
+  --line:rgb(var(--nl-ink-rgb) / 0.1);
+  --ok:var(--nl-ok);
+  --warn:var(--nl-warn);
+  --danger:var(--nl-danger);
+  --accent:var(--nl-muted);
+  --accent2:var(--nl-ok-soft);
+  --radius:12px;
+  --radius2:8px;
+  --shadow:0 10px 30px rgb(var(--nl-ink-rgb) / 0.07), 0 1px 3px rgb(var(--nl-ink-rgb) / 0.05);
+  --shadow2:0 4px 16px rgb(var(--nl-ink-rgb) / 0.055);
+  --shadow3:0 18px 46px rgb(var(--nl-ink-rgb) / 0.1), 0 2px 8px rgb(var(--nl-ink-rgb) / 0.06);
+  --focus:0 0 0 3px rgb(var(--nl-muted-rgb) / 0.24);
+}
+body {
+  background:
+    linear-gradient(180deg, rgb(var(--nl-surface-rgb) / 0.84), rgb(var(--nl-surface-rgb) / 0.96)),
+    radial-gradient(ellipse at 12% 0%, rgb(var(--nl-sky-rgb) / 0.42) 0%, transparent 44%),
+    radial-gradient(ellipse at 100% 100%, rgb(var(--nl-ok-soft-rgb) / 0.38) 0%, transparent 48%),
+    var(--soft-white);
+}
+.topbar {
+  background:rgb(var(--nl-surface-rgb) / 0.9);
+  border-bottom:1px solid rgb(var(--nl-muted-rgb) / 0.16);
+}
+.brand-mini .name,
+.dashboard-title,
+.hero-title,
+.patient-name,
+.metric-value,
+.kpi .v {
+  letter-spacing:0;
+}
+.btn,
+.btn-nav,
+.btn-mini,
+.input,
+.select,
+.modal-close {
+  min-height:40px;
+}
+.btn,
+.btn-nav,
+.btn-mini {
+  box-shadow:none;
+  transition:background .18s, border-color .18s, color .18s, box-shadow .18s, transform .18s, opacity .18s;
+}
+.btn:hover,
+.btn-nav:hover,
+.btn-mini:hover {
+  transform:translateY(-1px);
+}
+.btn:disabled,
+.btn[aria-busy="true"],
+.btn-mini:disabled,
+.btn-nav:disabled {
+  opacity:.52;
+  cursor:not-allowed;
+  transform:none;
+  box-shadow:none;
+}
+.btn-primary {
+  background:var(--nl-sky-strong);
+  border-color:var(--nl-sky-strong);
+  color:var(--nl-surface);
+}
+.btn-primary:hover {
+  background:var(--nl-sky-ink);
+  border-color:var(--nl-sky-ink);
+}
+.btn-secondary,
+.btn-nav {
+  background:rgb(var(--nl-surface-rgb) / 0.76);
+  border-color:rgb(var(--nl-muted-rgb) / 0.24);
+}
+.card,
+.metric-card,
+.status-card,
+.kpi,
+.story-card,
+.modal-panel,
+.hero-visual {
+  border-color:rgb(var(--nl-muted-rgb) / 0.16);
+}
+.card,
+.metric-card,
+.status-card,
+.kpi {
+  background:rgb(var(--nl-surface-rgb) / 0.94);
+}
+.card:hover,
+.metric-card:hover,
+.kpi:hover,
+.item:hover {
+  transform:translateY(-1px);
+}
+.card-title,
+.metric-label,
+.kpi .k,
+.input-group label {
+  color:rgb(var(--nl-ink-rgb) / 0.58);
+  letter-spacing:.10em;
+}
+.input-group {
+  margin-top:16px;
+}
+.input,
+.select {
+  background:var(--nl-surface);
+  border-color:rgb(var(--nl-muted-rgb) / 0.22);
+  padding:12px 14px;
+}
+.input:hover,
+.select:hover {
+  border-color:rgb(var(--nl-muted-rgb) / 0.42);
+}
+.input:focus,
+.select:focus,
+.dash-search:focus-within {
+  border-color:var(--nl-muted);
+  box-shadow:var(--focus);
+}
+.hint-box {
+  background:rgb(var(--nl-sky-rgb) / 0.24);
+  border:1px solid rgb(var(--nl-muted-rgb) / 0.18);
+}
+.error,
+.feedback-msg.danger {
+  color:var(--danger);
+}
+.feedback-msg.ok {
+  color:var(--ok);
+}
+.feedback-msg.warn {
+  color:var(--warn);
+}
+.feedback-msg {
+  padding:.7rem .8rem;
+  border-radius:var(--radius2);
+  background:rgb(var(--nl-sky-rgb) / 0.22);
+  border:1px solid rgb(var(--nl-muted-rgb) / 0.14);
+}
+.item {
+  border-color:rgb(var(--nl-muted-rgb) / 0.14);
+}
+.item .s {
+  line-height:1.45;
+}
+.row-btns {
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.btn-accept {
+  background:var(--nl-ok-soft);
+  border-color:var(--nl-ok-soft);
+  color:var(--nl-ink);
+}
+.btn-accept:hover {
+  background:var(--nl-ok-soft);
+  border-color:var(--nl-faint);
+}
+.btn-reject:hover {
+  background:rgb(var(--nl-coral-rgb) / 0.36);
+}
+.status-card.state-ok,
+.badge.ok {
+  background:rgb(var(--nl-ok-rgb) / 0.1);
+  border-color:rgb(var(--nl-ok-rgb) / 0.2);
+}
+.status-card.state-warn,
+.badge.warn {
+  background:rgb(var(--nl-warn-rgb) / 0.11);
+  border-color:rgb(var(--nl-warn-rgb) / 0.2);
+}
+.status-card.state-danger,
+.badge.bad {
+  background:rgb(var(--nl-danger-rgb) / 0.1);
+  border-color:rgb(var(--nl-danger-rgb) / 0.2);
+}
+.control-overlay {
+  background:rgb(var(--nl-surface-rgb) / 0.86);
+}
+.esp-status {
+  border-color:rgb(var(--nl-muted-rgb) / 0.18);
+}
+/* =========================================================
+   CLINICAL CONSOLE EXTENSIONS
+   ========================================================= */
+.mini-grid {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.form-grid {
+  display:grid;
+  gap:12px;
+}
+.form-grid.two {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.form-grid.three {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.textarea {
+  min-height:84px;
+  resize:vertical;
+  line-height:1.55;
+}
+.progress-track {
+  width:100%;
+  height:10px;
+  border-radius:999px;
+  background:rgb(var(--nl-muted-rgb) / 0.13);
+  overflow:hidden;
+  margin-top:14px;
+  border:1px solid rgb(var(--nl-muted-rgb) / 0.12);
+}
+.progress-track span {
+  display:block;
+  height:100%;
+  width:0;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--nl-sky-strong),var(--nl-sky-strong));
+  transition:width .28s ease;
+}
+.table-wrap {
+  width:100%;
+  overflow:auto;
+  border:1px solid rgb(var(--nl-muted-rgb) / 0.14);
+  border-radius:var(--radius2);
+  background:var(--nl-surface);
+}
+.clinical-table {
+  width:100%;
+  border-collapse:collapse;
+  font-family:var(--font-body);
+  font-size:.88rem;
+}
+.clinical-table th,
+.clinical-table td {
+  padding:10px 12px;
+  text-align:left;
+  border-bottom:1px solid rgb(var(--nl-muted-rgb) / 0.1);
+  vertical-align:top;
+  white-space:nowrap;
+}
+.clinical-table th {
+  font-family:var(--font-nav);
+  font-size:.66rem;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color:rgb(var(--nl-ink-rgb) / 0.58);
+  background:var(--nl-surface);
+}
+.clinical-table tr:last-child td {
+  border-bottom:none;
+}
+.compact-list .item {
+  padding:.78rem .85rem;
+}
+.modal-wide {
+  width:min(1180px,calc(100% - 32px));
+}
+.clinical-layout {
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);
+  gap:18px;
+  align-items:start;
+}
+.clinical-layout > section,
+.clinical-layout > aside {
+  background:var(--nl-surface);
+  border:1px solid rgb(var(--nl-muted-rgb) / 0.14);
+  border-radius:var(--radius);
+  padding:18px;
+  box-shadow:var(--shadow2);
+}
+.history-layout {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  margin-top:18px;
+}
+.panel-title {
+  font-family:var(--font-nav);
+  font-size:.72rem;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:rgb(var(--nl-ink-rgb) / 0.62);
+  margin-bottom:10px;
+}
+.panel-title.spaced {
+  margin-top:22px;
+}
+.mode-row {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:12px;
+}
+.data-value {
+  text-align:right;
+  max-width:58%;
+  overflow-wrap:anywhere;
+}
+@media (max-width:1100px) {
+  .mini-grid,
+  .history-layout {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .clinical-layout {
+    grid-template-columns:1fr;
+  }
+}
+@media (max-width:780px) {
+  .form-grid.two,
+  .form-grid.three,
+  .mini-grid,
+  .history-layout {
+    grid-template-columns:1fr;
+  }
+  .clinical-table th,
+  .clinical-table td {
+    white-space:normal;
+  }
+}

@@ -4,14 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NEOLIGHT - Fototerapia</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/styles.css">
+  <link rel="preload" href="./fonts/nunito-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 </head>
 <body>
-
   <!-- ======================================================
        TOPBAR / NAV
   ====================================================== -->
@@ -20,22 +16,20 @@
       <img src="./img/logo.png" alt="NEOLIGHT" />
       <div class="t">
         <div class="name">NEOLIGHT</div>
-        <div class="sub">Neonatal phototherapy system</div>
+        <div class="sub">Fototerapia neonatal</div>
       </div>
     </div>
-
     <nav class="nav-links" aria-label="Navegación principal" id="publicNav">
       <button type="button" data-nav="home"     id="navHome">Inicio</button>
       <button type="button" data-nav="login"    id="navLogin">Iniciar sesión</button>
       <button type="button" data-nav="historia" id="navHistoria">Historia</button>
       <button type="button" data-nav="contacto" id="navContacto">Contacto</button>
     </nav>
-
     <div class="top-actions">
+      <button id="topLoginBtn" class="btn-nav btn-nav-primary" type="button">Iniciar sesión</button>
       <button id="logoutBtn" class="btn-nav" style="display:none;">Cerrar sesión</button>
     </div>
   </header>
-
   <!-- ======================================================
        HOME
   ====================================================== -->
@@ -43,21 +37,26 @@
     <div class="page">
       <div class="hero">
         <div class="hero-left">
-          <h1 class="hero-title">Sistema de<br>Fototerapia<br>Automatizado</h1>
+          <div class="hero-kicker">NEOLIGHT · UNIVALLE</div>
+          <h1 class="hero-title">Sistema de <span>fototerapia</span> automatizado</h1>
           <p class="hero-sub">Control, monitoreo y trazabilidad en tiempo real para fototerapia neonatal.</p>
           <div class="hero-cta">
             <button class="btn btn-primary" id="heroLoginBtn" type="button">Iniciar sesión</button>
+            <button class="btn btn-outline-pop" id="heroRegisterBtn" type="button">Registrarse</button>
           </div>
         </div>
         <div class="hero-visual">
-          <video autoplay muted loop playsinline>
+          <video autoplay muted loop playsinline aria-label="Demostración del sistema NeoLight">
             <source src="./img/neolight-hero.mp4" type="video/mp4">
           </video>
         </div>
       </div>
+      <footer class="landing-footer">
+        <span>© 2026 NeoLight System · UNIVALLE Santa Cruz</span>
+        <span class="landing-footer-mark" aria-hidden="true">✦</span>
+      </footer>
     </div>
   </main>
-
   <!-- ======================================================
        HISTORIA
   ====================================================== -->
@@ -78,7 +77,6 @@
       </div>
     </div>
   </main>
-
   <!-- ======================================================
        CONTACTO
   ====================================================== -->
@@ -113,15 +111,16 @@
       </div>
     </div>
   </main>
-
   <!-- ======================================================
        DASHBOARD PACIENTE / TUTOR — PREMIUM SAAS v2
   ====================================================== -->
   <main id="view-dashboard-patient" class="view" aria-label="Dashboard Paciente">
     <section class="patient-shell patient-shell-pediatric">
-
-      <!-- ═══ SIDEBAR PEDIÁTRICA ════════════════════════════════ -->
       <aside class="patient-sidebar pt-pediatric-sidebar" aria-label="Navegación del paciente">
+        <div class="nl-brand">
+          <img src="./img/logo.png" alt="" />
+          <div><b>NEOLIGHT</b><small>Panel familiar</small></div>
+        </div>
         <div class="pt-sidebar-bell">
           <button class="pt-bell-btn" data-section-target="alarmas" title="Ver alertas" aria-label="Ver alertas activas">
             <svg class="pt-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -131,7 +130,6 @@
             <span class="pt-bell-badge" id="ptBellBadge"></span>
           </button>
         </div>
-
         <nav class="patient-nav" aria-label="Secciones del panel del paciente">
           <button class="patient-nav-item active" data-section-target="inicio" title="Inicio" type="button">
             <svg class="pt-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -187,14 +185,14 @@
         </div>
       </aside>
 
-      <!-- ═══ MAIN CONTENT ════════════════════════════════════════ -->
       <div class="patient-main">
-        <!-- ── INICIO ──────────────────────────────────────────── -->
         <section class="patient-section active" data-section="inicio">
 
           <!-- TOP GRID: hero (izquierda) + columna derecha alertas+métricas+timer -->
           <div class="patient-top-grid">
 
+            <!-- COL IZQUIERDA: hero + timer -->
+            <div class="patient-hero-col">
             <!-- Hero: video / camera -->
             <div class="patient-hero-card" id="ptHeroMedia">
               <video class="pt-hero-video" autoplay loop muted playsinline>
@@ -219,8 +217,9 @@
                 <h1 id="dashHelloPatient">Hola, —</h1>
                 <div class="pt-hero-tags">
                   <span>Paciente: <b id="pacienteNombreTop">—</b></span>
-                  <span>Modo: <b id="pacModoActual">REPOSO</b></span>
+                  <span>Modo: <b id="pacModoActual">Reposo</b></span>
                   <span id="patientGeneralStatus">Sistema en observación</span>
+                  <span class="antifaz-chip" id="ptAntifazChip" data-tone="off" hidden></span>
                 </div>
               </div>
               <button class="pt-cam-btn" id="ptCamToggle" type="button" aria-pressed="false" title="Activar cámara ESP32-S3">
@@ -231,9 +230,34 @@
                 <span class="pt-cam-lbl">Cámara</span>
                 <span class="pt-cam-track" aria-hidden="true"><span class="pt-cam-thumb"></span></span>
               </button>
+              <button class="pt-cam-btn pt-photo-btn" id="ptPhotoBtn" type="button" hidden title="Guarda esta imagen como foto del paciente para los reportes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+                <span class="pt-cam-lbl">Guardar foto</span>
+              </button>
             </div>
 
-            <!-- Columna derecha: alertas + 4 métricas (2x2) + timer -->
+              <!-- Timer card -->
+              <div class="pt-timer-card" id="timerCard">
+                <div class="pt-tc-head">
+                  <div class="neo-widget-icon"><img src="./img/reloj.png" alt="Tiempo" /></div>
+                  <div class="pt-tc-info">
+                    <div class="pt-stat-lbl">Tiempo en terapia</div>
+                    <div class="pt-tc-val" id="tiempoTerapia">00:00:00</div>
+                    <small>Toca para pausar</small>
+                  </div>
+                </div>
+                <div class="patient-progress pt-tc-bar"><span id="patientPlanProgressBar"></span></div>
+                <div class="pt-tc-foot">
+                  <em id="patientTherapyGoal">Tiempo objetivo pendiente</em>
+                  <span id="pacienteProgreso">—</span>
+                </div>
+                <div style="display:none">
+                  <div class="patient-donut" id="patientTherapyDonut"><span id="patientTherapyPct">0%</span></div>
+                </div>
+              </div>
+            </div><!-- /patient-hero-col -->
+
+            <!-- COL CENTRO: alertas + 4 métricas + export -->
             <div class="patient-side-cards">
 
               <!-- Alerts card -->
@@ -256,7 +280,7 @@
                     <div class="pt-wlbl">Intensidad LED</div>
                     <div class="pt-wval" id="patientLightLevel">—</div>
                     <div class="patient-sensor-bar"><i id="patientLightBar"></i></div>
-                    <em id="patientLightStatus">Esperando LDR</em>
+                    <em id="patientLightStatus">Sin terapia activa</em>
                   </div>
                 </div>
                 <div class="pt-metric-widget">
@@ -265,7 +289,7 @@
                     <div class="pt-wlbl">Distancia lámpara</div>
                     <div class="pt-wval" id="patientDistance">—</div>
                     <div class="patient-sensor-bar"><i id="patientDistanceBar"></i></div>
-                    <em id="patientDistanceStatus">Esperando HC-SR04</em>
+                    <em id="patientDistanceStatus">Sin terapia activa</em>
                   </div>
                 </div>
                 <div class="pt-metric-widget">
@@ -283,26 +307,6 @@
                     <div class="pt-wval" id="patientAmbientTemp">—</div>
                     <em id="patientAmbientTempStatus">Sin lectura</em>
                   </div>
-                </div>
-              </div>
-
-              <!-- Timer card -->
-              <div class="pt-timer-card" id="timerCard">
-                <div class="pt-tc-head">
-                  <div class="neo-widget-icon"><img src="./img/reloj.png" alt="Tiempo" /></div>
-                  <div class="pt-tc-info">
-                    <div class="pt-stat-lbl">Tiempo en terapia</div>
-                    <div class="pt-tc-val" id="tiempoTerapia">00:00:00</div>
-                    <small>Toca para pausar</small>
-                  </div>
-                </div>
-                <div class="patient-progress pt-tc-bar"><span id="patientPlanProgressBar"></span></div>
-                <div class="pt-tc-foot">
-                  <em id="patientTherapyGoal">Tiempo objetivo pendiente</em>
-                  <span id="pacienteProgreso">—</span>
-                </div>
-                <div style="display:none">
-                  <div class="patient-donut" id="patientTherapyDonut"><span id="patientTherapyPct">0%</span></div>
                 </div>
               </div>
 
@@ -337,35 +341,58 @@
           </div>
         </section>
 
-        <!-- ── SOLICITUDES ──────────────────────────────────────── -->
         <section class="patient-section" data-section="solicitudes">
           <div class="pt-section-hdr">
             <h2>Modo de terapia</h2>
-            <p>Solicita cambios de modo al médico a cargo</p>
+            <p>Reposo y el modo de tu plan se aplican al instante. Otro modo se envía como solicitud al doctor.</p>
           </div>
 
           <div class="patient-two-col">
-            <div class="patient-card locked" id="cardModo">
+            <div class="patient-card" id="cardModo">
               <h3>Modo de terapia</h3>
               <div class="patient-mode-row">
                 <span>Modo actual</span>
-                <span class="badge">REPOSO</span>
+                <span class="badge" id="pacModoBadge">Reposo</span>
               </div>
               <div class="patient-mode-actions">
                 <button class="btn btn-primary" id="pacBtnReposo" data-modo="reposo">Reposo</button>
                 <button class="btn" id="pacBtnConvencional" data-modo="convencional">Convencional</button>
                 <button class="btn" id="pacBtnIntensivo" data-modo="intensivo">Intensivo</button>
               </div>
-              <div class="patient-manual-controls" aria-label="Control manual de lampara">
-                <button class="manual-ctrl-btn" type="button" data-manual-move="up">Subir</button>
-                <button class="manual-ctrl-btn" type="button" data-manual-move="left">Izquierda</button>
-                <button class="manual-ctrl-btn stop" type="button" data-manual-move="stop">Detener</button>
-                <button class="manual-ctrl-btn" type="button" data-manual-move="right">Derecha</button>
-                <button class="manual-ctrl-btn" type="button" data-manual-move="down">Bajar</button>
+              <div class="ctrl-manual">
+                <div class="ctrl-manual-lbl">Control manual de lámpara</div>
+                <div class="manual-status" id="manualStatusBox" data-step="request" aria-live="polite">
+                  <div><strong>Control manual bloqueado</strong><span>El doctor debe autorizar el control manual.</span></div>
+                  <button class="btn-mini" id="manualRequestBtn" type="button">Solicitar control manual</button>
+                </div>
+                <div class="ctrl-pad">
+                  <button class="dpad up" type="button" data-manual-move="up" aria-label="Subir lámpara">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                    <span>Subir</span>
+                  </button>
+                  <button class="dpad left" type="button" data-manual-move="left" aria-label="Mover izquierda">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    <span>Izquierda</span>
+                  </button>
+                  <button class="ctrl-stop" type="button" data-manual-move="stop" aria-label="Detener movimiento">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.6"/></svg>
+                    <span>Detener</span>
+                  </button>
+                  <button class="dpad right" type="button" data-manual-move="right" aria-label="Mover derecha">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    <span>Derecha</span>
+                  </button>
+                  <button class="dpad down" type="button" data-manual-move="down" aria-label="Bajar lámpara">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                    <span>Bajar</span>
+                  </button>
+                </div>
               </div>
               <div class="control-overlay" id="modoOverlay">
+                <div class="co-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
                 <strong>Control bloqueado</strong>
                 <p>El modo solo puede modificarse cuando el médico habilita el control manual.</p>
+                <button class="control-overlay-action" type="button">Solicitar control manual</button>
               </div>
               <div id="pacModoMsg" class="feedback-msg" style="display:none;"></div>
             </div>
@@ -392,7 +419,6 @@
           </div>
         </section>
 
-        <!-- ── HISTORIAL ────────────────────────────────────────── -->
         <section class="patient-section" data-section="historial">
           <div class="pt-section-hdr">
             <h2>Historial de sesiones</h2>
@@ -401,26 +427,26 @@
             <div class="table-wrap">
               <table class="clinical-table">
                 <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th></tr></thead>
-                <tbody id="patientHistoryRows"><tr><td colspan="3">Sin datos</td></tr></tbody>
+                <tbody id="patientHistoryRows"><tr><td><span class="td-date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-04</span></td><td><span class="tag sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h4"/></svg>Sesión</span></td><td>Inicio terapia intensiva · 4h programadas</td></tr><tr><td><span class="td-date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-04</span></td><td><span class="tag lectura"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>Lectura</span></td><td>Bilirrubina: 14.2 mg/dL</td></tr><tr><td><span class="td-date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-03</span></td><td><span class="tag sesion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h4"/></svg>Sesión</span></td><td>Fin sesión intensiva · 6h completadas</td></tr><tr><td><span class="td-date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-03</span></td><td><span class="tag cambio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 4l3 3-3 3"/><path d="M20 7H8"/><path d="M7 20l-3-3 3-3"/><path d="M4 17h12"/></svg>Cambio</span></td><td>Modo cambiado a intensivo por Dr. Marquadt</td></tr><tr><td><span class="td-date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-02</span></td><td><span class="tag ingreso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Ingreso</span></td><td>Paciente registrado en sistema NEOLIGHT</td></tr></tbody>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- ── ALARMAS ──────────────────────────────────────────── -->
         <section class="patient-section" data-section="alarmas">
           <div class="pt-section-hdr">
             <h2>Historial de alarmas</h2>
           </div>
           <div class="patient-card">
-            <button class="btn btn-primary btn-full" id="muteAlarmsBtn">Silenciar alarmas (5 min)</button>
+            <div class="alarm-actions-row">
+              <button class="btn btn-primary btn-full" id="muteAlarmsBtn">Silenciar alarmas (5 min)</button>
+            </div>
             <div class="list compact-list" id="patientAlarmsList">
-              <div class="item"><div class="left"><div class="t">Sin alarmas</div><div class="s">No hay registros recientes.</div></div></div>
+              <div class="alert-row warn"><div class="ar-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="ar-body"><div class="ar-title">Temperatura ambiente elevada</div><div class="ar-desc">Se registró 26.2°C · Verificar climatización</div><div class="ar-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-04 09:15</div></div><span class="ar-sev">ADVERTENCIA</span></div><div class="alert-row info"><div class="ar-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="ar-body"><div class="ar-title">Cambio de modo programado</div><div class="ar-desc">Transición a modo reposo en 30 minutos</div><div class="ar-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-04 08:45</div></div><span class="ar-sev">INFO</span></div><div class="alert-row crit"><div class="ar-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="ar-body"><div class="ar-title">Distancia fuera de rango<span class="ar-silenced">SILENCIADA</span></div><div class="ar-desc">Distancia detectada: 52cm · Rango ideal: 25-40cm</div><div class="ar-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14" stroke-linecap="round" stroke-linejoin="round"/></svg>2026-06-04 07:30</div></div><span class="ar-sev">CRÍTICA</span></div>
             </div>
           </div>
         </section>
 
-        <!-- ── AYUDA ────────────────────────────────────────────── -->
         <section class="patient-section" data-section="ayuda">
           <div class="pt-section-hdr">
             <h2>Reporte y ayuda</h2>
@@ -433,7 +459,6 @@
         </section>
       </div>
 
-      <!-- ═══ PANEL DERECHO — PACIENTE ════════════════════════════ -->
       <aside class="patient-right-rail pt-right-panel">
 
         <!-- Encabezado del rail -->
@@ -444,21 +469,22 @@
         <!-- Perfil -->
         <div class="patient-profile-card">
           <div class="patient-profile-avatar" id="patientProfileAvatar">BB</div>
+          <button class="patient-photo-change" id="patientPhotoChange" type="button">Cambiar foto</button>
           <h3 id="patientProfileName">—</h3>
           <span id="patientProfileCode">Código —</span>
           <div><b>Edad</b><em id="patientProfileAge">—</em></div>
           <div><b>Tutor</b><em id="patientTutorName">—</em></div>
-          <div><b>Doctor</b><em id="patientDoctorName">—</em></div>
-          <div><b>Estado clínico</b><em id="patientClinicalState">—</em></div>
-          <div><b>Terapia acumulada</b><em id="patientTherapyAccumulated">00:00:00</em></div>
+          <div><b><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3.3"/><path d="M3.5 17c0-3.2 2.9-5.6 6.5-5.6s6.5 2.4 6.5 5.6"/></svg>Doctor</b><em id="patientDoctorName">—</em></div>
+          <div><b><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 10.5h3l2-5 3 9 2-6 1.5 2h3.5"/></svg>Estado clínico</b><em id="patientClinicalState">—</em></div>
+          <div><b><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7.2"/><polyline points="10,5.5 10,10 13,13" stroke-linecap="round" stroke-linejoin="round"/></svg>Terapia acumulada</b><em id="patientTherapyAccumulated">00:00:00</em></div>
         </div>
 
         <!-- Conexión -->
         <div class="patient-connection-card">
-          <h3>Conexión</h3>
-          <span><b>ESP32 maestro</b><em id="patientMasterStatus">Sin datos</em></span>
-          <span><b>ESP32 esclavo</b><em id="patientSlaveStatus">Sin datos</em></span>
-          <span><b>Socket.IO</b><em id="patientSocketStatus">Conectando</em></span>
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M1.5 8.5a15 15 0 0 1 21 0"/><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg>Conexión</h3>
+          <span><b><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="4" width="15" height="5" rx="1.5"/><rect x="2.5" y="11" width="15" height="5" rx="1.5"/><circle cx="6" cy="6.5" r=".8" fill="currentColor" stroke="none"/><circle cx="6" cy="13.5" r=".8" fill="currentColor" stroke="none"/></svg>Lámpara</b><em id="patientMasterStatus">Sin datos</em></span>
+          <span><b><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="10" height="10" rx="2"/><path d="M8 2.5v2M12 2.5v2M8 15.5v2M12 15.5v2M2.5 8h2M2.5 12h2M15.5 8h2M15.5 12h2"/></svg>Actuadores</b><em id="patientSlaveStatus">Sin datos</em></span>
+          <span><b><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 7.5a9 9 0 0 1 14 0"/><path d="M6 11a5 5 0 0 1 8 0"/><circle cx="10" cy="14" r="1.1" fill="currentColor" stroke="none"/></svg>Servidor</b><em id="patientSocketStatus">Conectando</em></span>
         </div>
 
         <!-- IDs ocultos requeridos por JS -->
@@ -473,6 +499,8 @@
     </section>
     <section id="patientPdfReport" class="patient-pdf-report" aria-hidden="true"></section>
   </main>
+</body>
+</html>
 
   <!-- ======================================================
        DASHBOARD DOCTOR — PREMIUM V1
@@ -480,11 +508,11 @@
   <main id="view-dashboard-doctor" class="view" aria-label="Dashboard Doctor">
     <section class="doctor-premium-shell">
 
-      <!-- ═══ SIDEBAR ══════════════════════════════════════════ -->
       <aside class="doctor-premium-sidebar">
 
-        <div class="dp-logo-wrap">
-          <img src="./img/logo.png" alt="NL" class="dp-logo-img" />
+        <div class="dp-logo-wrap nl-brand">
+          <img src="./img/logo.png" alt="" class="dp-logo-img" />
+          <div><b>NEOLIGHT</b><small>Panel médico</small></div>
         </div>
 
         <nav class="dp-nav">
@@ -529,19 +557,19 @@
         </div>
       </aside>
 
-      <!-- ═══ MAIN CONTENT ══════════════════════════════════════ -->
       <div class="doctor-premium-main">
 
         <!-- Header -->
-        <header class="doctor-premium-header">
+        <header class="doctor-premium-header nl-band">
           <div class="dp-hero-copy">
             <span class="dp-hero-kicker">NEOLIGHT Clinical Console</span>
             <h2 id="dashHelloDoctor">Hola, Dr(a). —</h2>
             <p>Monitoreo de fototerapia neonatal</p>
             <div class="dp-hero-meta">
-              <span>Paciente seleccionado: <b id="doctorSelectedPatient">Sin selección</b></span>
+              <span>Paciente en la lámpara: <b id="doctorSelectedPatient">Ninguno</b></span>
               <span>Modo actual: <b id="doctorCurrentMode">Sin datos</b></span>
-              <span class="dp-hero-status">Sistema conectado</span>
+              <span class="dp-hero-status is-off" id="doctorLampStatus">Lámpara sin conexión</span>
+              <span class="antifaz-chip" id="doctorAntifazStatus" data-tone="off" hidden></span>
             </div>
           </div>
           <div class="dp-hdr-right">
@@ -558,25 +586,25 @@
           <div class="doc-overview-row">
 
             <div class="doc-kpi-card">
-              <span class="doc-kpi-icon">P</span>
+              <span class="doc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg></span>
               <div class="doc-kpi-num" id="kpiPatients">—</div>
               <div class="doc-kpi-lbl">Pacientes asignados</div>
             </div>
 
             <div class="doc-kpi-card">
-              <span class="doc-kpi-icon">S</span>
+              <span class="doc-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></span>
               <div class="doc-kpi-num" id="kpiRequests">—</div>
               <div class="doc-kpi-lbl">Solicitudes pendientes</div>
             </div>
 
             <div class="doc-kpi-card">
-              <span class="doc-kpi-icon alert">A</span>
+              <span class="doc-kpi-icon alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg></span>
               <div class="doc-kpi-num doc-kpi-alert" id="kpiAlerts">—</div>
               <div class="doc-kpi-lbl">Alertas hoy</div>
             </div>
 
             <div class="doc-kpi-card">
-              <span class="doc-kpi-icon session">T</span>
+              <span class="doc-kpi-icon session"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></span>
               <div class="doc-kpi-num doc-kpi-session" id="kpiActiveSessions">—</div>
               <div class="doc-kpi-lbl">Sesiones activas</div>
             </div>
@@ -750,17 +778,22 @@
           <div class="doctor-profile-meta" id="doctorProfileLicense">Matrícula: —</div>
           <div class="doctor-profile-meta">Rol: Personal médico</div>
           <div class="doctor-profile-meta" id="doctorProfileCenter">Centro médico neonatal</div>
+          <div class="doctor-signature-box">
+            <span class="doctor-signature-lbl">Mi firma</span>
+            <img id="doctorSignatureImg" alt="Tu firma registrada" hidden>
+            <span id="doctorSignatureEmpty" class="doctor-signature-empty">Todavía no registraste tu firma</span>
+            <button class="btn-mini" id="doctorSignatureEdit" type="button">Registrar firma</button>
+          </div>
         </div>
 
         <div class="doctor-rail-card">
-          <div class="doctor-rail-title">Estado sistema</div>
+          <div class="doctor-rail-title">Equipo</div>
           <div class="doctor-status-list" id="doctorSystemStatus">
-            <span><b>MySQL</b><em>Sin datos</em></span>
-            <span><b>Socket.IO</b><em>Sin datos</em></span>
-            <span><b>ESP32 maestro</b><em>No configurado</em></span>
-            <span><b>ESP32 esclavo</b><em>No configurado</em></span>
-            <span><b>LEDs</b><em>Sin datos</em></span>
-            <span><b>Actuadores</b><em>Sin datos</em></span>
+            <span><b>Lámpara</b><em class="is-bad">Sin conexión</em></span>
+            <span><b>Modo</b><em>—</em></span>
+            <span><b>Distancia</b><em>—</em></span>
+            <span><b>Intensidad LED</b><em>—</em></span>
+            <span><b>Temp. ambiente</b><em>—</em></span>
           </div>
         </div>
 
@@ -783,6 +816,13 @@
 
     </section>
     <section id="doctorPdfReport" class="doctor-pdf-report" aria-hidden="true"></section>
+  </main>
+
+  <!-- ======================================================
+       DASHBOARD SUPERUSUARIO
+  ====================================================== -->
+  <main id="view-dashboard-superuser" class="view" aria-label="Dashboard Superusuario">
+    <div id="superuserMount"></div>
   </main>
 
   <!-- ======================================================
@@ -834,6 +874,7 @@
         <div class="code-wrap">
           <div class="code-title">Acceso del hospital</div>
           <div class="code-sub">Ingresa el código (6 dígitos)</div>
+          <div class="code-status" id="codeStatus" hidden aria-live="polite"></div>
           <div class="dots" id="dots">
             <div class="dot" data-i="0"></div><div class="dot" data-i="1"></div><div class="dot" data-i="2"></div>
             <div class="dot" data-i="3"></div><div class="dot" data-i="4"></div><div class="dot" data-i="5"></div>
@@ -943,6 +984,11 @@
             <input id="docPass" class="input" type="password" placeholder="Mínimo 5 caracteres">
             <button type="button" class="eye-btn" data-target="docPass">👁</button>
           </div>
+        </div>
+        <div class="hint-box"><strong>Paso 3: Firma</strong><br><small>Aparecerá al pie de los reportes que emitas.</small></div>
+        <div class="sig-field">
+          <canvas id="docSignaturePad" class="sig-pad" width="600" height="200" aria-label="Dibuja tu firma aquí"></canvas>
+          <div class="sig-actions"><span>Firma con el dedo o el mouse</span><button type="button" class="btn-mini" id="docSignatureClear">Borrar</button></div>
         </div>
         <button class="btn btn-primary btn-full"   id="registerDoctorBtn">Crear cuenta (Doctor)</button>
         <button class="btn btn-secondary btn-full" id="backToChooser3">Volver</button>
