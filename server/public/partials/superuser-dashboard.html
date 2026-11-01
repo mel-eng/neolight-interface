@@ -24,6 +24,9 @@
       <button class="su-nav-item" type="button" data-su-section="mantenimiento">
         <span class="su-nav-icon" data-icon="wrench"></span><span>Mantenimiento</span>
       </button>
+      <button class="su-nav-item" type="button" data-su-section="encuestas">
+        <span class="su-nav-icon" data-icon="edit"></span><span>Encuestas</span>
+      </button>
     </nav>
 
     <div class="su-sidebar-art" aria-hidden="true">
@@ -426,6 +429,29 @@
             <div class="su-list su-maintenance-history" id="suMaintenanceHistory"></div>
           </article>
         </div>
+      </section>
+      <!-- ENCUESTAS -->
+      <section class="su-section" data-su-panel="encuestas">
+        <div class="su-enc-grid">
+          <article class="su-card">
+            <div class="su-card-head"><div><span class="su-card-kicker">Invitar</span><h3>Nueva invitación</h3></div></div>
+            <p class="su-ldr-help">Cada persona recibe un link único. Lo abre desde el celular sin cuenta, responde y firma. El link sirve una sola vez.</p>
+            <div class="su-form">
+              <label><span>Nombre completo</span><input id="suEncNombre" placeholder="Ej.: Ana Paola Sosa"></label>
+              <label><span>Rol</span><select id="suEncRol"><option value="tutor">Tutor</option><option value="doctor">Doctor</option><option value="ingeniero">Ingeniero</option></select></label>
+              <button class="su-button primary" id="suEncCrear" type="button">Crear invitación</button>
+            </div>
+          </article>
+          <article class="su-card">
+            <div class="su-card-head"><div><span class="su-card-kicker">Resultados</span><h3>Satisfacción promedio</h3></div><span class="su-status-pill neutral" id="suEncConteo">0 respondidas</span></div>
+            <div id="suEncPromedios" class="su-enc-prom"><p class="su-ldr-help">Todavía no hay respuestas.</p></div>
+            <button class="su-button ghost" id="suEncPdfTodo" type="button">PDF con todas las encuestas y firmas</button>
+          </article>
+        </div>
+        <article class="su-card" style="margin-top:14px">
+          <div class="su-card-head"><div><span class="su-card-kicker">Invitaciones</span><h3>Personas invitadas</h3></div></div>
+          <div id="suEncLista" class="su-enc-lista"><p class="su-ldr-help">Todavía no creaste invitaciones.</p></div>
+        </article>
       </section>
     </main>
   </div>

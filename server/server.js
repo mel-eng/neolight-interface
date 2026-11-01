@@ -29,6 +29,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import ExcelJS         from 'exceljs';
 import { registrarReportes } from './reportes.js';
 import { registrarLdrLux } from './ldr-lux.js';
+import { registrarEncuestas, crearTablasEncuesta } from './encuestas.js';
 import { detectarMarcador } from './aruco-layer.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -353,6 +354,7 @@ const PUBLIC_API = new Set([
 app.use(async (req, res, next) => {
   if (!req.path.startsWith('/api/')) return next();
   if (PUBLIC_API.has(`${req.method} ${req.path}`)) return next();
+  if (/^\/api\/encuesta\/[a-f0-9]{32}$/.test(req.path)) return next();   // encuesta por invitación (sin cuenta)
   try {
     const bearer = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     const auth = await resolveToken(bearer || String(req.query.t || ''));
@@ -479,6 +481,9 @@ async function ensureSchemaCompatibility() {
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       KEY ix_plan_cambios_paciente (paciente_id, created_at), KEY ix_plan_cambios_plan (plan_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  await crearTablasEncuesta(safe);
+  // Pacientes de demostración (maniquí): el reporte lo indica.
+  await safe(`ALTER TABLE pacientes ADD COLUMN simulado TINYINT(1) NOT NULL DEFAULT 0`);
   // Foto del paciente para los reportes.
   await safe(`ALTER TABLE pacientes ADD COLUMN foto MEDIUMBLOB NULL`);
   await safe(`ALTER TABLE pacientes ADD COLUMN foto_at DATETIME NULL`);
@@ -4035,6 +4040,12 @@ app.get('/api/doctor/alerts/today', async (req, res) => {
       silenced: Number(rows[0]?.silenced || 0)
     });
   } catch (e) { res.status(500).json({ ok: false, error: 'server_error' }); }
+});
+
+// ===================== ENCUESTA DE SATISFACCIÓN ========================
+registrarEncuestas(app, {
+  pool: { execute: (...a) => pool.execute(...a), query: (...a) => pool.query(...a), getConnection: () => pool.getConnection() },
+  baseDir: __dirname, requireSuperuser,
 });
 
 // ===================== CALIBRACIÓN LDR → LUX ========================
